@@ -13,7 +13,6 @@ import Interactor from './Interactor';
 import Metadata from './Metadata';
 import NodeInfo from './NodeInfo';
 import TemplateModule from './TemplateModule';
-import PoeModule from './PoeModule';
 import Transfer from './Transfer';
 import Upgrade from './Upgrade';
 
@@ -31,13 +30,12 @@ function Main () {
     </Dimmer>
   );
 
-  if (apiState === 'ERROR') {
-    return loader('Error connecting to the blockchain');
-  } else if (apiState !== 'READY') return loader('Connecting to the blockchain');
+  if (apiState === 'ERROR') return loader('Error connecting to the blockchain');
+  else if (apiState !== 'READY') return loader('Connecting to the blockchain');
 
   if (keyringState !== 'READY') {
     return loader(
-      'Loading accounts (please review any extension\'s authorization)'
+      "Loading accounts (please review any extension's authorization)"
     );
   }
 
@@ -46,35 +44,32 @@ function Main () {
   return (
     <div ref={contextRef}>
       <Sticky context={contextRef}>
-        <AccountSelector setAccountAddress={setAccountAddress}/>
+        <AccountSelector setAccountAddress={setAccountAddress} />
       </Sticky>
       <Container>
         <Grid stackable columns='equal'>
           <Grid.Row stretched>
-            <NodeInfo/>
-            <Metadata/>
-            <BlockNumber/>
-            <BlockNumber finalized/>
+            <NodeInfo />
+            <Metadata />
+            <BlockNumber />
+            <BlockNumber finalized />
           </Grid.Row>
           <Grid.Row stretched>
-            <Balances/>
+            <Balances />
           </Grid.Row>
           <Grid.Row>
-            <PoeModule accountPair={accountPair}/>
+            <Transfer accountPair={accountPair} />
+            <Upgrade accountPair={accountPair} />
           </Grid.Row>
           <Grid.Row>
-            <Transfer accountPair={accountPair}/>
-            <Upgrade accountPair={accountPair}/>
+            <Interactor accountPair={accountPair} />
+            <Events />
           </Grid.Row>
           <Grid.Row>
-            <Interactor accountPair={accountPair}/>
-            <Events/>
-          </Grid.Row>
-          <Grid.Row>
-            <TemplateModule accountPair={accountPair}/>
+            <TemplateModule accountPair={accountPair} />
           </Grid.Row>
         </Grid>
-        <DeveloperConsole/>
+        <DeveloperConsole />
       </Container>
     </div>
   );
@@ -83,7 +78,7 @@ function Main () {
 export default function App () {
   return (
     <SubstrateContextProvider>
-      <Main/>
+      <Main />
     </SubstrateContextProvider>
   );
 }
