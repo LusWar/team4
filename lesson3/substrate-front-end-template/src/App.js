@@ -12,9 +12,10 @@ import Events from './Events';
 import Interactor from './Interactor';
 import Metadata from './Metadata';
 import NodeInfo from './NodeInfo';
-import TemplateModule from './TemplateModule';
+import PoeModule from './PoeModule';
 import Transfer from './Transfer';
 import Upgrade from './Upgrade';
+
 
 function Main () {
   const [accountAddress, setAccountAddress] = useState(null);
@@ -29,6 +30,7 @@ function Main () {
       <Loader size='small'>{text}</Loader>
     </Dimmer>
   );
+
 
   if (apiState === 'ERROR') return loader('Error connecting to the blockchain');
   else if (apiState !== 'READY') return loader('Connecting to the blockchain');
@@ -61,12 +63,14 @@ function Main () {
             <Transfer accountPair={accountPair} />
             <Upgrade accountPair={accountPair} />
           </Grid.Row>
-          <Grid.Row>
+          {/* <Grid.Row>
             <Interactor accountPair={accountPair} />
             <Events />
-          </Grid.Row>
+          </Grid.Row> */}
           <Grid.Row>
-            <TemplateModule accountPair={accountPair} />
+            <PoeModule accountPair={accountPair} />
+
+            <Events />
           </Grid.Row>
         </Grid>
         <DeveloperConsole />

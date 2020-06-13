@@ -39,7 +39,7 @@ decl_storage! {
 
 // The pallet's events
 decl_event!(
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
+	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId	 {
 		ClaimCreated(AccountId, Vec<u8>),
 		ClaimRevoked(AccountId, Vec<u8>),
 	}
