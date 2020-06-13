@@ -2,7 +2,7 @@
 
 /// A FRAME pallet proof of existence with necessary imports
 
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, ensure, StorageMap};
+use frame_support::{decl_module, decl_storage, decl_event, decl_error, ensure, dispatch, StorageMap};
 use frame_system::{self as system, ensure_signed}; 
 use sp_std::vec::Vec;
 
@@ -64,7 +64,7 @@ decl_module! {
 
 			/// Allow a user to claim ownership of an unclaimed proof
 			#[weight = 10_000]
-			fn create_claim(origin, proof: Vec<u8>) {
+			fn create_claim(origin, proof: Vec<u8>) -> dispatch::DispatchResult {
 					// Verify that the incoming transaction is signed and store who the
 					// caller of this function is.
 					let sender = ensure_signed(origin)?;
@@ -80,11 +80,13 @@ decl_module! {
 
 					// Emit an event that the claim was created
 					Self::deposit_event(RawEvent::ClaimCreated(sender, proof));
+
+					Ok(())
 			}
 
 			/// Allow the owner to revoke their claim
 			#[weight = 10_000]
-			fn revoke_claim(origin, proof: Vec<u8>) {
+			fn revoke_claim(origin, proof: Vec<u8>) -> dispatch::DispatchResult {
 					// Determine who is calling the function
 					let sender = ensure_signed(origin)?;
 
@@ -102,6 +104,35 @@ decl_module! {
 
 					// Emit an event that the claim was erased
 					Self::deposit_event(RawEvent::ClaimRevoked(sender, proof));
+
+					Ok(())
+			}
+
+			/// Allow the owner to transfer their claim
+			#[weight = 10_000]
+			fn transfer_claim(origin, target: T::AccountId, proof: Vec<u8>) -> dispatch::DispatchResult {
+					// Determine who is calling the function
+					let sender = ensure_signed(origin)?;
+
+					// Verify that the specified proof has been claimed
+					ensure!(Proofs::<T>::contains_key(&proof), Error::<T>::NoSuchProof);
+
+					// Get owner of the claim
+					let (owner, _) = Proofs::<T>::get(&proof);
+
+					// Verify that sender of the current call is the claim owner
+					ensure!(sender == owner, Error::<T>::NotProofOwner);
+
+					// Call the `system` pallet to get the current block number
+					let current_block = <system::Module<T>>::block_number();
+
+					// Store the proof with the sender and the current block number
+					Proofs::<T>::insert(&proof, (&target, current_block));
+
+					// Emit an event that the claim was created
+					Self::deposit_event(RawEvent::ClaimCreated(target, proof));
+
+					Ok(())
 			}
 	}
 }
