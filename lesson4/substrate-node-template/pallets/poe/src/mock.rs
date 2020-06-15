@@ -60,11 +60,13 @@ impl balances::Trait for Test {
 parameter_types! {
 	pub const MaxClaimLength: u32 = 6;
 	pub const ExistentialDeposit: u64 = 1;
+	pub const MaxNoteLength: u32 = 10;
 }
 impl Trait for Test {
 	type Event = ();
 	type MaxClaimLength = MaxClaimLength;
 	type Currency = Balances;
+	type MaxNoteLength = MaxNoteLength;
 }
 pub type PoeModule = Module<Test>;
 pub type System = system::Module<Test>;
