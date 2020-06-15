@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Grid } from 'semantic-ui-react';
+import { Form, Input, Grid, TextArea, Label } from 'semantic-ui-react';
 
 import { useSubstrate } from './substrate-lib';
 import { TxButton } from './substrate-lib/components';
@@ -12,15 +12,17 @@ function Main (props) {
   // The transaction submission status
   const [status, setStatus] = useState('');
   const [digest, setDigest] = useState('');
+  const [note, setNote] = useState('');
   const [dest, setDest] = useState('');
   const [owner, setOwner] = useState('');
   const [blockNumber, setBlockNumber] = useState(0);
+  const [showingNotification, setShowingNotification] = useState(false);
 
   useEffect(() => {
     let unsubscribe;
     api.query.poeModule.proofs(digest, (result) => {
       setOwner(result[0].toString());
-      setBlockNumber(result[1].toNumber());
+      setBlockNumber(result[2].toNumber());
     }).then(unsub => {
       unsubscribe = unsub;
     })
@@ -46,6 +48,25 @@ function Main (props) {
     setDest(data.value);
   };
 
+  const MAX_NOTE_LENGTH = 256;
+
+  const onNoteChange = (_, data) => {
+    if (data.value && data.value.length > MAX_NOTE_LENGTH) {
+      data.value = data.value.substring(0, MAX_NOTE_LENGTH);
+    }
+    setNote(data.value);
+  };
+
+  const setExtrinsicStatus = (data) => {
+    console.log(data);
+    console.log(data.indexOf('Finalized'));
+    if (data.indexOf('Finalized') !== -1) {
+      setShowingNotification(true);
+      setTimeout(() => setShowingNotification(false), 5000);
+    }
+    setStatus(data);
+  };
+
   return (
     <Grid.Column width={8}>
       <h1>Proof of Existence Module</h1>
@@ -56,6 +77,16 @@ function Main (props) {
             id='file'
             label='Your File'
             onChange={ (e) => handleFileChosen(e.target.files[0]) }
+          />
+        </Form.Field>
+        <Form.Field>
+          <Label>Note</Label>
+          <TextArea
+            type='text'
+            placeholder='Some note (max 256 chars)'
+            state='note'
+            maxLength={256}
+            onChange={onNoteChange}
           />
         </Form.Field>
         <Form.Field>
@@ -72,13 +103,13 @@ function Main (props) {
           <TxButton
             accountPair={accountPair}
             label='Create Claim'
-            setStatus={setStatus}
+            setStatus={setExtrinsicStatus}
             type='SIGNED-TX'
             attrs={{
               palletRpc: 'poeModule',
               callable: 'createClaim',
-              inputParams: [digest],
-              paramFields: [true]
+              inputParams: [digest, note],
+              paramFields: [true, true]
             }}
           />
           <TxButton
@@ -107,11 +138,29 @@ function Main (props) {
           />
         </Form.Field>
       </Form>
+      {showingNotification && <SuccessNotification digest={digest} note={note}/>}
       <div style={{ marginTop: 10 }}>{status}</div>
       <div style={{ fontSize: 12, color: 'orange' }}>{`Claim info, owner: ${owner}, blockNumber: ${blockNumber}`}</div>
     </Grid.Column>
   );
 }
+
+const SuccessNotification = (props) => {
+  const { digest, note } = props;
+  const notificationStyle = {
+    marginTop: 10,
+    border: '1px solid green',
+    backgroundColor: 'lightgreen',
+    color: 'darkgreen',
+    borderRadius: 5,
+    padding: 10
+  };
+  return (
+    <div style={notificationStyle}>
+      You have successfully claimed file with hash {digest}, and note <strong>"{note}"</strong>.
+    </div>
+  );
+};
 
 export default function PoeModule (props) {
   const { api } = useSubstrate();
