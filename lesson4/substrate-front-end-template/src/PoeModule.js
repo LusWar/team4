@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Form, Input, Grid, TextArea, Label } from 'semantic-ui-react';
+import { Form, Input, Grid, TextArea, Label, Button } from 'semantic-ui-react';
 
 import { useSubstrate } from './substrate-lib';
 import { TxButton } from './substrate-lib/components';
@@ -10,6 +10,7 @@ function Main (props) {
   const { accountPair } = props;
 
   // The transaction submission status
+  const [unsub, setUnsub] = useState(null);
   const [status, setStatus] = useState('');
   const [digest, setDigest] = useState('');
   const [note, setNote] = useState('');
@@ -17,6 +18,9 @@ function Main (props) {
   const [owner, setOwner] = useState('');
   const [blockNumber, setBlockNumber] = useState(0);
   const [showingNotification, setShowingNotification] = useState(false);
+  const [userAddress, setUserAddress] = useState('');
+  const [userDocs, setUserDocs] = useState([]);
+  const [showingUserDocs, setShowingUserDocs] = useState(false);
 
   useEffect(() => {
     let unsubscribe;
@@ -30,6 +34,39 @@ function Main (props) {
 
     return () => unsubscribe && unsubscribe();
   }, [digest, api.query.poeModule]);
+
+  const convertToString = (hex) => {
+    if (hex && hex.length) {
+      return decodeURIComponent(hex.replace(/\s+/g, '').replace(/[0-9a-f]{2}/g, '%$&')).substr(2);
+    }
+    return '';
+  };
+
+  const queryUserDoc = () => {
+    unsub && unsub();
+    api.query.poeModule.claims(userAddress, (result) => {
+      setUserDocs([]);
+      if (result && result.length) {
+        const docs = [];
+        result.forEach((digest) => api.query.poeModule.proofs(digest.toString(), (res) => {
+          docs.push({
+            digest: digest.toString(),
+            note: convertToString(res[1].toString()),
+            blockNumber: res[2].toNumber()
+          });
+          if (docs.length === result.length) {
+            setUserDocs(docs);
+            setShowingUserDocs(true);
+            setTimeout(() => setShowingUserDocs(false), 5000);
+          }
+        }));
+      } else {
+        setShowingUserDocs(true);
+        setTimeout(() => setShowingUserDocs(false), 5000);
+      }
+    }).then(unsub => setUnsub(unsub))
+      .catch(console.error);
+  };
 
   const handleFileChosen = (file) => {
     const fileReader = new FileReader();
@@ -55,6 +92,10 @@ function Main (props) {
       data.value = data.value.substring(0, MAX_NOTE_LENGTH);
     }
     setNote(data.value);
+  };
+
+  const onUserAddressChange = (_, data) => {
+    setUserAddress(data.value);
   };
 
   const setExtrinsicStatus = (data) => {
@@ -141,6 +182,29 @@ function Main (props) {
       {showingNotification && <SuccessNotification digest={digest} note={note}/>}
       <div style={{ marginTop: 10 }}>{status}</div>
       <div style={{ fontSize: 12, color: 'orange' }}>{`Claim info, owner: ${owner}, blockNumber: ${blockNumber}`}</div>
+      <Form style={{ marginTop: 20 }}>
+        <Form.Field>
+          <Input
+            fluid
+            label='User Address'
+            type='text'
+            placeholder='address'
+            state='userAddress'
+            onChange={onUserAddressChange}
+          />
+        </Form.Field>
+        <Form.Field>
+          <Button
+            color='green'
+            basic
+            disabled={!userAddress}
+            onClick={queryUserDoc}
+          >
+            Query User Doc
+          </Button>
+        </Form.Field>
+      </Form>
+      {showingUserDocs && <UserDocs docs={userDocs}/>}
     </Grid.Column>
   );
 }
@@ -149,9 +213,9 @@ const SuccessNotification = (props) => {
   const { digest, note } = props;
   const notificationStyle = {
     marginTop: 10,
-    border: '1px solid green',
-    backgroundColor: 'lightgreen',
-    color: 'darkgreen',
+    border: '1px solid blue',
+    backgroundColor: 'lightblue',
+    color: 'darkblue',
     borderRadius: 5,
     padding: 10
   };
@@ -160,6 +224,31 @@ const SuccessNotification = (props) => {
       You have successfully claimed file with hash {digest}, and note <strong>"{note}"</strong>.
     </div>
   );
+};
+
+const UserDocs = (props) => {
+  const userDocsStyle = {
+    marginTop: 10,
+    border: '1px solid green',
+    backgroundColor: 'lightgreen',
+    color: 'darkgreen',
+    borderRadius: 5,
+    padding: 10
+  };
+  const { docs } = props;
+  if (docs && docs.length) {
+    return (
+      <div style={ userDocsStyle }>
+        <ol>
+          {docs.map((doc, index) => <li key={index}>{doc.digest} =&gt; ({doc.note}, {doc.blockNumber})</li>)}
+        </ol>
+      </div>
+    );
+  } else {
+    return (
+      <div style={ userDocsStyle }>No docs found...</div>
+    );
+  }
 };
 
 export default function PoeModule (props) {
