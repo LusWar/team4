@@ -261,13 +261,14 @@ impl template::Trait for Runtime {
 parameter_types! {
 	pub const MinLength: usize = 1;
 	pub const MaxLength: usize = 1024;
+	pub const MaxMemoLength: usize = 256;
 }
 
 impl poe::Trait for Runtime {
 	type Event = Event;
-	type Currency = Balances;
 	type MinLength = MinLength;
 	type MaxLength = MaxLength;
+	type MaxMemoLength = MaxMemoLength;
 }
 
 construct_runtime!(
