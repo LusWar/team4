@@ -9,6 +9,7 @@ use frame_support::{
 use frame_system::{self as system, ensure_signed};
 use sp_std::prelude::*;
 use sp_runtime::traits::StaticLookup;
+use pallet_timestamp as timestamp;
 
 #[cfg(test)]
 mod mock;
@@ -17,7 +18,7 @@ mod mock;
 mod tests;
 
 /// The pallet's configuration trait.
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + timestamp::Trait {
 	// Add other types and constants required to configure this pallet.
 
 	/// The overarching event type.
@@ -33,8 +34,11 @@ decl_storage! {
 	// storage items are isolated from other pallets.
 	// ---------------------------------vvvvvvvvvvvvvv
 	trait Store for Module<T: Trait> as TemplateModule {
-		Proofs get(fn proofs): map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, T::BlockNumber);
-		Memo get(fn memo): map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, (Vec<u8>, u64));
+		Proofs get(fn proofs): map hasher(blake2_128_concat) Vec<u8> =>
+			(T::AccountId, T::BlockNumber, Option<Vec<u8>>, T::Moment);
+
+		ProofsOf get(fn of): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) Vec<u8> =>
+			(T::AccountId, T::BlockNumber, Option<Vec<u8>>, T::Moment);
 	}
 }
 
@@ -70,7 +74,7 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 0]
-		pub fn create_claim(origin, claim: Vec<u8>, memo: Vec<u8>) -> dispatch::DispatchResult {
+		pub fn create_claim(origin, claim: Vec<u8>, memo: Option<Vec<u8>>) -> dispatch::DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			ensure!(!Proofs::<T>::contains_key(&claim), Error::<T>::ProofAlreadyExist);
@@ -78,9 +82,11 @@ decl_module! {
 			// 附加题答案
 			ensure!(T::MaxClaimLength::get() >= claim.len() as u32, Error::<T>::ProofTooLong);
 
-			Proofs::<T>::insert(&claim, (sender.clone(), system::Module::<T>::block_number()));
-
-			Memo::<T>::insert(&claim, (sender.clone(), (memo, )))
+			let current_time = <timestamp::Module<T>>::get();
+			let block_number = system::Module::<T>::block_number();
+			let proof_value = (sender.clone(), &block_number, &memo, &current_time);
+			Proofs::<T>::insert(&claim, proof_value.clone());
+			ProofsOf::<T>::insert(sender.clone(), &claim, proof_value);
 
 			Self::deposit_event(RawEvent::ClaimCreated(sender, claim));
 
@@ -93,11 +99,12 @@ decl_module! {
 
 			ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
 
-			let (owner, _block_number) = Proofs::<T>::get(&claim);
+			let (owner, _block_number, _, _) = Proofs::<T>::get(&claim);
 
 			ensure!(owner == sender, Error::<T>::NotClaimOwner);
 
 			Proofs::<T>::remove(&claim);
+			ProofsOf::<T>::remove(sender.clone(), &claim);
 
 			Self::deposit_event(RawEvent::ClaimRevoked(sender, claim));
 
@@ -106,18 +113,22 @@ decl_module! {
 
 		// 第二题答案
 		#[weight = 0]
-		pub fn transfer_claim(origin, claim: Vec<u8>, dest: <T::Lookup as StaticLookup>::Source) -> dispatch::DispatchResult {
+		pub fn transfer_claim(origin, claim: Vec<u8>, dest: <T::Lookup as StaticLookup>::Source, ) -> dispatch::DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
 
-			let (owner, _block_number) = Proofs::<T>::get(&claim);
+			let (owner, _block_number, memo, _) = Proofs::<T>::get(&claim);
 
 			ensure!(owner == sender, Error::<T>::NotClaimOwner);
 
 			let dest = T::Lookup::lookup(dest)?;
+			let current_time = <timestamp::Module<T>>::get();
+			let block_number = system::Module::<T>::block_number();
+			let proof_value = (dest.clone(), &block_number, &memo, &current_time);
 
-			Proofs::<T>::insert(&claim, (dest, system::Module::<T>::block_number()));
+			Proofs::<T>::insert(&claim, proof_value.clone());
+			ProofsOf::<T>::insert(dest.clone(), &claim, proof_value);
 
 			Ok(())
 		}
