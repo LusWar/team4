@@ -42,6 +42,7 @@ decl_storage! {
 	trait Store for Module<T: Trait> as PoeModule {
 		Proofs get(fn proofs): map hasher(blake2_128_concat) Vec<u8> => (T::AccountId, Option<Vec<u8>>, T::BlockNumber);
 		Prices get(fn prices): map hasher(blake2_128_concat) Vec<u8> => (BalanceOf<T>, T::BlockNumber);
+		Claims get(fn claims): map hasher(blake2_128_concat) T::AccountId => Vec<Vec<u8>>;
 	}
 }
 
@@ -97,7 +98,22 @@ decl_module! {
 			// 附加题答案
 			ensure!(T::MaxClaimLength::get() >= claim.len() as u32, Error::<T>::ProofTooLong);
 
-			Proofs::<T>::insert(&claim, (sender.clone(), note, system::Module::<T>::block_number()));
+			Proofs::<T>::insert(&claim, (sender.clone(), note.clone(), system::Module::<T>::block_number()));
+
+			if Claims::<T>::contains_key(&sender) {
+				let mut vec = Claims::<T>::get(&sender);
+				match vec.binary_search(&claim) {
+					// If the search succeeds, the caller is already a member, so just return
+					Ok(_) => (),
+					Err(index) => vec.insert(index, claim.clone()),
+				};
+				Claims::<T>::insert(&sender, vec);
+			}
+			else {
+				let mut vec = Vec::<Vec<u8>>::new();
+				vec.push(claim.clone());
+				Claims::<T>::insert(&sender, vec);
+			}
 
 			Self::deposit_event(RawEvent::ClaimCreated(sender, claim));
 
@@ -115,6 +131,13 @@ decl_module! {
 			ensure!(owner == sender, Error::<T>::NotClaimOwner);
 
 			Proofs::<T>::remove(&claim);
+
+			let mut vec = Claims::<T>::get(&sender);
+			match vec.binary_search(&claim) {
+				Ok(index) => vec.remove(index),
+				Err(_) => [0].to_vec(),
+			};
+			Claims::<T>::insert(&sender, vec);
 
 			Self::deposit_event(RawEvent::ClaimRevoked(sender, claim));
 
@@ -135,6 +158,28 @@ decl_module! {
 			let dest = T::Lookup::lookup(dest)?;
 
 			Proofs::<T>::insert(&claim, (dest.clone(), note, system::Module::<T>::block_number()));
+
+			let mut vec = Claims::<T>::get(&sender);
+			match vec.binary_search(&claim) {
+				Ok(index) => vec.remove(index),
+				Err(_) => [0].to_vec(),
+			};
+			Claims::<T>::insert(&sender, vec);
+			
+			if Claims::<T>::contains_key(&dest) {
+				let mut vec = Claims::<T>::get(&dest);
+				match vec.binary_search(&claim) {
+					// If the search succeeds, the caller is already a member, so just return
+					Ok(_) => (),
+					Err(index) => vec.insert(index, claim.clone()),
+				};
+				Claims::<T>::insert(&dest, vec);
+			}
+			else {
+				let mut vec = Vec::<Vec<u8>>::new();
+				vec.push(claim.clone());
+				Claims::<T>::insert(&dest, vec);
+			}
 
 			Self::deposit_event(RawEvent::ClaimTransferred(sender, claim, dest));
 
