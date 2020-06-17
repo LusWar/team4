@@ -13,11 +13,9 @@
   - 源代码
   - 目录里要有： 
     
-    1) `substrate-node-template` 子目录。这是 substrate 节点的逻辑。
-    
-    2a) `substrate-front-end-template` 子目录。这是前端，在该 UI 组件内，增加一个可选择指定一个档案的输入，及一个文字栏的输入作备注。然后作签名提交交易。UI 组件完成品应当显示如下：
-
-    ![poe-01](./question-assets/poe-01.png)
+    1) `substrate-node-template` 子目录。这是 substrate 节点的逻辑。  
+    `答案:`  
+    **`lesson4/substrate-node-template/pallets/poe/src/lib.rs:89`**
     
     2b) `client` 子目录。这是 node.js 客户端。以 polkadot-JS API 连接到 substrate 节点，實現 `async function submitDocInfo` 函数。
 
@@ -35,15 +33,12 @@
     cd client
     yarn install
     yarn submitDocInfo <your-file-path> <comment>
-    ``` 
-
+    ```   
+    `答案:`  
+    **`lesson4/client/src/script.js:32`**
+    
 #### 附加题(5分) - 本次附加题为必答题
 
-下列 a) 或 b) 选一个作答
-
-a) 增加一个功能，允许前端输入一个 AccountID，遍历显示属于该用户的文件 hash, 其创建时的 blockNumber，及其备注。UI 组件完成品应当显示如下：
-
-![poe-02](./question-assets/poe-02.png)
 
 b) 用 node.js 的话，则是以 polkadot-JS API 连接到 substrate 节点，實現 `async function getUserDocs` 函数。
 
@@ -66,4 +61,6 @@ async function getUserDocs(acct) {
 cd client
 yarn install
 yarn getUserDocs <user-account>
-```
+```   
+`答案:`  
+**`lesson4/client/src/script.js:56`**
