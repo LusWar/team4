@@ -37,8 +37,8 @@ decl_storage! {
 		Proofs get(fn proofs): map hasher(blake2_128_concat) Vec<u8> =>
 			(T::AccountId, T::BlockNumber, Option<Vec<u8>>, T::Moment);
 
-		ProofsOf get(fn of): double_map hasher(blake2_128_concat) T::AccountId, hasher(blake2_128_concat) Vec<u8> =>
-			(T::AccountId, T::BlockNumber, Option<Vec<u8>>, T::Moment);
+		ProofsOf get(fn proofs_of): map hasher(identity) T::AccountId =>
+			Vec<(Vec<u8>, T::BlockNumber, Option<Vec<u8>>, T::Moment)>;
 	}
 }
 
@@ -85,8 +85,8 @@ decl_module! {
 			let current_time = <timestamp::Module<T>>::get();
 			let block_number = system::Module::<T>::block_number();
 			let proof_value = (sender.clone(), &block_number, &memo, &current_time);
-			Proofs::<T>::insert(&claim, proof_value.clone());
-			ProofsOf::<T>::insert(sender.clone(), &claim, proof_value);
+			Proofs::<T>::insert(&claim, proof_value);
+			Self::insert_claim_memo(sender.clone(), claim.clone(), memo);
 
 			Self::deposit_event(RawEvent::ClaimCreated(sender, claim));
 
@@ -104,7 +104,7 @@ decl_module! {
 			ensure!(owner == sender, Error::<T>::NotClaimOwner);
 
 			Proofs::<T>::remove(&claim);
-			ProofsOf::<T>::remove(sender.clone(), &claim);
+			//ProofsOf::<T>::remove(sender.clone(), &claim);
 
 			Self::deposit_event(RawEvent::ClaimRevoked(sender, claim));
 
@@ -127,10 +127,32 @@ decl_module! {
 			let block_number = system::Module::<T>::block_number();
 			let proof_value = (dest.clone(), &block_number, &memo, &current_time);
 
-			Proofs::<T>::insert(&claim, proof_value.clone());
-			ProofsOf::<T>::insert(dest.clone(), &claim, proof_value);
+			Proofs::<T>::insert(&claim, proof_value);
+			//ProofsOf::<T>::insert(dest.clone(), &claim, proof_value);
+			Self::insert_claim_memo(dest.clone(), claim.clone(), memo);
 
 			Ok(())
+		}
+	}
+}
+
+impl <T: Trait> Module<T> {
+	pub fn insert_claim_memo(sender: T::AccountId, claim: Vec<u8>, memo: Option<Vec<u8>>) {
+		let current_time = <timestamp::Module<T>>::get();
+		let block_number = system::Module::<T>::block_number();
+		if ProofsOf::<T>::contains_key(sender.clone()) {
+			let claims: Vec<(Vec<u8>, T::BlockNumber, Option<Vec<u8>>, T::Moment)> = ProofsOf::<T>::get(sender.clone());
+			let mut new_claims = vec![];
+			for cla in claims {
+				if claim != cla.0 {
+					new_claims.push(cla);
+				}
+			}
+			new_claims.push((claim, block_number, memo, current_time));
+
+			ProofsOf::<T>::insert(sender.clone(), new_claims);
+		} else {
+			ProofsOf::<T>::insert(sender.clone(), vec![(claim, block_number, memo, current_time)]);
 		}
 	}
 }

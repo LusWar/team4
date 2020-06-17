@@ -32,3 +32,5 @@ function getDocInfoFromAddr(addr) {
   // }, {}, ...]
 }
 ```
+
+ >![star](./images/lesson4-claim-memo-create-query.png)
