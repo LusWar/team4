@@ -48,6 +48,7 @@ decl_event!(
 		ClaimRevoked(AccountId, Vec<u8>),
 		SetPrice(Vec<u8>, Balance),
 		Transfer(AccountId, AccountId, Vec<u8>, Balance),
+		UnSale(Vec<u8>),
 	}
 );
 
@@ -59,6 +60,7 @@ decl_error! {
 		NotClaimOwner,
 		ProofTooLong,
 		TooLowPrice,
+		ClaimNotSale,
 	}
 }
 
@@ -142,10 +144,27 @@ decl_module! {
 		}
 
 		#[weight = 0]
+		pub fn un_sale(origin, claim: Vec<u8>) -> dispatch::DispatchResult {
+			let sender = ensure_signed(origin)?;
+
+			ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
+			ensure!(Prices::<T>::contains_key(&claim), Error::<T>::ClaimNotSale);
+
+			let (owner, _block_number) = Proofs::<T>::get(&claim);
+
+			ensure!(owner == sender, Error::<T>::NotClaimOwner);
+
+			Prices::<T>::remove(&claim);
+			Self::deposit_event(RawEvent::UnSale(claim));
+			Ok(())
+		}
+
+		#[weight = 0]
 		pub fn buy_claim(origin, claim: Vec<u8>, price: BalanceOf<T>) -> dispatch::DispatchResult {
 			let sender = ensure_signed(origin)?;
 
 			ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
+			ensure!(Prices::<T>::contains_key(&claim), Error::<T>::ClaimNotSale);
 
 			let (owner, _block_number) = Proofs::<T>::get(&claim);
 			let _price = Prices::<T>::get(&claim);
@@ -153,10 +172,10 @@ decl_module! {
 
 			T::Currency::transfer(&sender, &owner, price.clone(), ExistenceRequirement::KeepAlive)?;
 			Proofs::<T>::insert(&claim, (&sender, system::Module::<T>::block_number()));
+			Prices::<T>::remove(&claim);
 			Self::deposit_event(RawEvent::Transfer(sender, owner, claim, price));
 
 			Ok(())
 		}
-		
 	}
 }

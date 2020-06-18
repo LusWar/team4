@@ -24,7 +24,7 @@
 第三题（附加题）：实现购买存证的功能代码：
 
 * 用户A为自己的某个存证记录设置价格；
-`lesson3/substrate-node-template/pallets/poe/src/lib.rs#L130`
+![set_price](set_prices.png)
 * 用户B可以以一定的价格购买某个存证，当出价高于用户A设置的价格时，则以用户A设定的价格将费用从用户B转移到用户A，再将该存证进行转移。如果出价低于用户A的价格时，则不进行转移，返回错误。
-`lesson3/substrate-node-template/pallets/poe/src/lib.rs#L145`
+![buy_claim](buy_claim.png)
 
