@@ -1,15 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
 use codec::{Encode, Decode};
-use frame_support::{decl_module, decl_storage, decl_error, ensure, StorageValue, StorageMap, traits::Randomness};
+use frame_support::{decl_module, decl_storage, decl_event, decl_error, ensure, StorageValue, StorageMap, traits::Randomness};
 use sp_io::hashing::blake2_128;
-use frame_system::ensure_signed;
+use frame_system::{self as system, ensure_signed};
 use sp_runtime::{DispatchError, DispatchResult};
+use sp_std::prelude::*;
 
-#[derive(Encode, Decode)]
+#[derive(Encode, Decode, Debug)]
 pub struct Kitty(pub [u8; 16]);
 
-pub trait Trait: frame_system::Trait {
+pub trait Trait: system::Trait {
+	//type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
 decl_storage! {
@@ -26,6 +28,12 @@ decl_storage! {
 	}
 }
 
+// decl_event! {
+// 	pub enum Event<T> where T as system::Trait {
+// 		KittyCreated(u32, Kitty),
+// 	}
+// }
+
 decl_error! {
 	pub enum Error for Module<T: Trait> {
 		KittiesCountOverflow,
@@ -37,6 +45,8 @@ decl_error! {
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		type Error = Error<T>;
+
+		//fn deposit_event() = default;
 
 		/// Create a new kitty
 		#[weight = 0]
@@ -51,6 +61,11 @@ decl_module! {
 			let kitty = Kitty(dna);
 
 			// 作业：补完剩下的部分
+
+			Self::insert_kitty(sender, kitty_id, kitty);
+			//Self::deposit_event(RawEvent::KittyCreated(kitty_id, kitty));
+
+			// Ok(())
 		}
 
 		/// Breed kitties
@@ -70,6 +85,13 @@ fn combine_dna(dna1: u8, dna2: u8, selector: u8) -> u8 {
 impl<T: Trait> Module<T> {
 	fn random_value(sender: &T::AccountId) -> [u8; 16] {
 		// 作业：完成方法
+		let payload = (
+			<pallet_randomness_collective_flip::Module<T> as Randomness<T::Hash>>::random_seed(),
+			sender,
+			<frame_system::Module<T>>::extrinsic_index()
+			);
+		let dna = payload.using_encoded(blake2_128);
+		dna
 	}
 
 	fn next_kitty_id() -> sp_std::result::Result<u32, DispatchError> {
@@ -82,6 +104,15 @@ impl<T: Trait> Module<T> {
 
 	fn insert_kitty(owner: T::AccountId, kitty_id: u32, kitty: Kitty) {
 		// 作业：完成方法
+
+		Kitties::insert(kitty_id, &kitty);
+		KittiesCount::put(kitty_id + 1);
+
+		let user_kitty_id = Self::owned_kitties_count(&owner);
+		<OwnedKitties<T>>::insert((&owner, user_kitty_id), kitty_id);
+		<OwnedKittiesCount<T>>::insert(&owner, user_kitty_id + 1);
+
+
 	}
 
 	fn do_breed(sender: T::AccountId, kitty_id_1: u32, kitty_id_2: u32) -> DispatchResult {
