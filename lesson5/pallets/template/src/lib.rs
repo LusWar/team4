@@ -7,7 +7,7 @@
 /// If you remove this file, you can remove those references
 
 /// For more guidance on Substrate FRAME, see the example pallet
-/// https://github.com/paritytech/substrate/blob/master/frame/example/src/lib.rs
+/// https://gitee.com/greatliu/substrate/blob/master/frame/example/src/lib.rs
 
 use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch};
 use frame_system::{self as system, ensure_signed};

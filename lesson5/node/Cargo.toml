@@ -23,92 +23,92 @@ path = '../runtime'
 version = '2.0.0-rc2'
 
 [dependencies.sc-basic-authorship]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-cli]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-client-api]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sc-consensus]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-consensus-aura]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-executor]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-finality-grandpa]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-network]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-service]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sc-transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sp-consensus]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sp-consensus-aura]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '0.8.0-rc2'
 
 [dependencies.sp-core]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sp-finality-grandpa]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sp-inherents]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sp-runtime]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [dependencies.sp-transaction-pool]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
 [build-dependencies.substrate-build-script-utils]
-git = 'https://github.com/paritytech/substrate.git'
+git = 'https://gitee.com/greatliu/substrate.git'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
