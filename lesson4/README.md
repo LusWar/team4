@@ -1,3 +1,7 @@
+
+
+![avatar](./createClaimWithNote.png)
+
 ## 第四课作业
 
 试在 [Substrate Front-end Template](https://github.com/SubstrateCourse/substrate-front-end-template) 或 node.js (node.js 则以命令行介面)，实现以下功能：
@@ -32,3 +36,4 @@ function getDocInfoFromAddr(addr) {
   // }, {}, ...]
 }
 ```
+

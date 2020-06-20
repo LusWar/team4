@@ -25,6 +25,8 @@ use sp_version::RuntimeVersion;
 #[cfg(feature = "std")]
 use sp_version::NativeVersion;
 
+
+
 // A few exports that help ease life for downstream crates.
 #[cfg(any(feature = "std", test))]
 pub use sp_runtime::BuildStorage;
@@ -40,8 +42,9 @@ pub use frame_support::{
 	},
 };
 
+
 /// Importing a template pallet
-pub use template;
+pub use poe;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -259,7 +262,7 @@ impl template::Trait for Runtime {
 
 // 附加题答案
 parameter_types! {
-	pub const MaxClaimLength: u32 = 6;
+	pub const MaxClaimLength: u32 = 256;
 }
 
 impl poe::Trait for Runtime {
