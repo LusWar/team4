@@ -1,5 +1,6 @@
 use codec::{Compact, Encode};
 
+// SCALE encoding
 fn assert_encode<T: Encode>(t: T, bytes: &[u8]) {
     let data = Encode::encode(&t);
     assert_eq!(data, bytes);
@@ -27,45 +28,44 @@ enum TestEnum2 {
 
 #[test]
 fn test_codec() {
+    // b"\xa1\xa1\xa1\xa1" four bytes
+    // b"\x01\0\0\0" four bytes
     assert_encode(1u32, b"\x01\0\0\0");
     assert_encode(1u64, b"\x01\0\0\0\0\0\0\0");
 
     assert_encode(true, b"\x01");
-    assert_encode(false, b"\x00");
+    assert_encode(false, b"\0");
 
-    assert_encode(TestEnum::A, b"\x00");
+    assert_encode(TestEnum::A, b"\0");
     assert_encode(TestEnum::B, b"\x01");
     assert_encode(TestEnum::C, b"\x0a");
 
     assert_encode((1u32, 2u32), b"\x01\0\0\0\x02\0\0\0");
     assert_encode((TestEnum::A, 2u32, TestEnum::C), b"\0\x02\0\0\0\x0a");
 
-    assert_encode(
-        TestStruct {
-            a: TestEnum::A,
-            b: 2u32,
-            c: TestEnum::C,
-        },
-        b"\0\x02\0\0\0\x0a",
+    // structs and tuples are encode to the same thing.
+    assert_eq!(
+        Encode::encode(&TestStruct { a: TestEnum::A, b: 2u32, c: TestEnum::C }),
+        Encode::encode(&(TestEnum::A, 2u32, TestEnum::C)),
     );
 
     assert_encode(
         TestEnum2::A(TestEnum::A, 2u32, TestEnum::C),
         b"\0\0\x02\0\0\0\x0a",
     );
+
     assert_encode(
-        TestEnum2::B(TestStruct {
-            a: TestEnum::A,
-            b: 2u32,
-            c: TestEnum::C,
-        }),
+        TestEnum2::B(TestStruct { a: TestEnum::A, b: 2u32, c: TestEnum::C }),
         b"\x01\0\x02\0\0\0\x0a",
     );
 
     assert_encode(Vec::<u8>::new(), b"\0");
-    assert_encode(vec![1u32, 2u32], b"\x08\x01\0\0\0\x02\0\0\0");
+    assert_encode(vec![1u32, 2], b"\x08\x01\0\0\0\x02\0\0\0");
+    let c = Encode::encode(&Compact(2u8));
+    assert_eq!(&[8], c.as_slice());
 }
 
+// xx xx xx 00 == one byte
 // compact encoding:
 // 0b00 00 00 00 / 00 00 00 00 / 00 00 00 00 / 00 00 00 00
 //   xx xx xx 00															(0 .. 2**6)		(u8)
