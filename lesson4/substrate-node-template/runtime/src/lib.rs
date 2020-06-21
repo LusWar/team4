@@ -33,7 +33,7 @@ pub use balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
 	construct_runtime, parameter_types, StorageValue,
-	traits::{KeyOwnerProofSystem, Randomness},
+	traits::{KeyOwnerProofSystem, Randomness, Currency},
 	weights::{
 		Weight, IdentityFee,
 		constants::{BlockExecutionWeight, ExtrinsicBaseWeight, RocksDbWeight, WEIGHT_PER_SECOND},
@@ -43,6 +43,7 @@ pub use frame_support::{
 /// Importing a template pallet
 pub use template;
 
+pub use poe;
 /// An index to a block.
 pub type BlockNumber = u32;
 
@@ -257,18 +258,6 @@ impl template::Trait for Runtime {
 	type Event = Event;
 }
 
-// 附加题答案
-parameter_types! {
-	pub const MaxClaimLength: u32 = 256;
-}
-
-impl poe::Trait for Runtime {
-	type Event = Event;
-	
-	// 附加题答案
-	type MaxClaimLength = MaxClaimLength;
-}
-
 construct_runtime!(
 	pub enum Runtime where
 		Block = Block,
@@ -288,6 +277,19 @@ construct_runtime!(
 		PoeModule: poe::{Module, Call, Storage, Event<T>},
 	}
 );
+
+
+parameter_types! {
+	pub const MaxClaimLength: u32 = 256;
+}
+
+impl poe::Trait for Runtime {
+	type Event = Event;
+
+	type MaxClaimLength = MaxClaimLength;
+	type Currency = Balances;
+
+}
 
 /// The address format for describing accounts.
 pub type Address = AccountId;
