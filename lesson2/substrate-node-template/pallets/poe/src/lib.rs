@@ -115,7 +115,7 @@ decl_module! {
 		  let (owner,_) = Proofs::<T>::get(&proof);
 		  ensure!(sender == owner, Error::<T>::NotProofOwner);
 		  ensure!(sender != to, Error::<T>::ShouldNotBeSameOwner);
-		  Proofs::<T>::remove(&proof);`
+		  Proofs::<T>::remove(&proof);
 		  let current_block = <system::Module<T>>::block_number();
 		  Proofs::<T>::insert(&proof,(&to, current_block));
 		  Self::deposit_event(RawEvent::TransferClaim(proof,to));
