@@ -38,17 +38,18 @@ decl_storage! {
 			(T::AccountId, T::BlockNumber, Option<Vec<u8>>, T::Moment);
 
 		ProofsOf get(fn proofs_of): map hasher(identity) T::AccountId =>
-			Vec<(Vec<u8>, T::BlockNumber, Option<Vec<u8>>, T::Moment)>;
+			Vec<Vec<u8>>;
 	}
 }
 
 // The pallet's events
-decl_event!(
-	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId {
-		ClaimCreated(AccountId, Vec<u8>),
-		ClaimRevoked(AccountId, Vec<u8>),
+decl_event! {
+	pub enum Event<T> where AccountId = <T as system::Trait>::AccountId,
+	 Moment = <T as timestamp::Trait>::Moment {
+		ClaimCreated(AccountId, Vec<u8>, Option<Vec<u8>>, Moment),
+		ClaimRevoked(AccountId, Vec<u8>, Option<Vec<u8>>, Moment),
 	}
-);
+}
 
 // The pallet's errors
 decl_error! {
@@ -86,9 +87,9 @@ decl_module! {
 			let block_number = system::Module::<T>::block_number();
 			let proof_value = (sender.clone(), &block_number, &memo, &current_time);
 			Proofs::<T>::insert(&claim, proof_value);
-			Self::insert_claim_memo(sender.clone(), claim.clone(), memo);
+			Self::insert_account_with_claim(sender.clone(), claim.clone());
 
-			Self::deposit_event(RawEvent::ClaimCreated(sender, claim));
+			Self::deposit_event(RawEvent::ClaimCreated(sender, claim, memo, current_time));
 
 			Ok(())
 		}
@@ -99,14 +100,14 @@ decl_module! {
 
 			ensure!(Proofs::<T>::contains_key(&claim), Error::<T>::ClaimNotExist);
 
-			let (owner, _block_number, _, _) = Proofs::<T>::get(&claim);
+			let (owner, _block_number, memo, created_at) = Proofs::<T>::get(&claim);
 
 			ensure!(owner == sender, Error::<T>::NotClaimOwner);
 
 			Proofs::<T>::remove(&claim);
 			//ProofsOf::<T>::remove(sender.clone(), &claim);
 
-			Self::deposit_event(RawEvent::ClaimRevoked(sender, claim));
+			Self::deposit_event(RawEvent::ClaimRevoked(sender, claim, memo, created_at));
 
 			Ok(())
 		}
@@ -129,7 +130,7 @@ decl_module! {
 
 			Proofs::<T>::insert(&claim, proof_value);
 			//ProofsOf::<T>::insert(dest.clone(), &claim, proof_value);
-			Self::insert_claim_memo(dest.clone(), claim.clone(), memo);
+			Self::insert_account_with_claim(dest.clone(), claim.clone());
 
 			Ok(())
 		}
@@ -137,22 +138,17 @@ decl_module! {
 }
 
 impl <T: Trait> Module<T> {
-	pub fn insert_claim_memo(sender: T::AccountId, claim: Vec<u8>, memo: Option<Vec<u8>>) {
-		let current_time = <timestamp::Module<T>>::get();
-		let block_number = system::Module::<T>::block_number();
+	pub fn insert_account_with_claim(sender: T::AccountId, claim: Vec<u8>) {
 		if ProofsOf::<T>::contains_key(sender.clone()) {
-			let claims: Vec<(Vec<u8>, T::BlockNumber, Option<Vec<u8>>, T::Moment)> = ProofsOf::<T>::get(sender.clone());
-			let mut new_claims = vec![];
-			for cla in claims {
-				if claim != cla.0 {
-					new_claims.push(cla);
-				}
-			}
-			new_claims.push((claim, block_number, memo, current_time));
+			let mut claims: Vec<Vec<u8>> = ProofsOf::<T>::get(sender.clone());
 
-			ProofsOf::<T>::insert(sender.clone(), new_claims);
+			if !claims.contains(&claim) {
+				claims.push(claim)
+			}
+
+			ProofsOf::<T>::insert(sender.clone(), claims);
 		} else {
-			ProofsOf::<T>::insert(sender.clone(), vec![(claim, block_number, memo, current_time)]);
+			ProofsOf::<T>::insert(sender.clone(), vec![claim]);
 		}
 	}
 }
