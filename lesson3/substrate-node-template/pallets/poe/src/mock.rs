@@ -11,6 +11,9 @@ use frame_system as system;
 impl_outer_origin! {
 	pub enum Origin for Test {}
 }
+impl_outer_origin! {
+	pub enum Other for Test {}
+}
 
 // For testing the pallet, we construct most of a mock runtime. This means
 // first constructing a configuration type (`Test`) which `impl`s each of the
