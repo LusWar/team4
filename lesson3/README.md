@@ -14,12 +14,19 @@
 * 创建存证的测试用例；
 * 撤销存证的测试用例；
 * 转移存证的测试用例；
+![avator](./screenshot/unittest.png)
 
 第二题：编写存证模块的UI，包括
 
 * 创建存证的UI
+![avator](./screenshot/createInBlock.png)
+![avator](./screenshot/createFinalized.png)
 * 删除存证的UI
+![avator](./screenshot/revokeInBlock.png)
+![avator](./screenshot/revokeFinalized.png)
 * 转移存证的UI
+![avator](./screenshot/transferInBlock.png)
+![avator](./screenshot/transferFinalized.png)
 
 第三题（附加题）：实现购买存证的功能代码：
 
