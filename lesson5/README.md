@@ -109,7 +109,7 @@ version/commit by running following commands:
 
 ```bash
 # git clone from the main Substrate repo
-git clone https://github.com/paritytech/substrate.git
+git clone https://gitee.com/greatliu/substrate.git
 cd substrate
 
 # Switch to a particular branch or commit of the Substrate repo your node-template based on
