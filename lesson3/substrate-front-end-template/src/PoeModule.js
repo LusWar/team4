@@ -12,15 +12,16 @@ function Main (props) {
   // The transaction submission status
   const [status, setStatus] = useState('');
   const [digest, setDigest] = useState('');
-  const [dest, setDest] = useState('');
   const [owner, setOwner] = useState('');
   const [blockNumber, setBlockNumber] = useState(0);
+  const [accountId, setAccountId] = useState(0);
 
   useEffect(() => {
     let unsubscribe;
-    api.query.poeModule.proofs(digest, (result) => {
-      setOwner(result[0].toString());
-      setBlockNumber(result[1].toNumber());
+    api.query.poeModule.proofs(digest, result => {
+      console.log(result)
+      setOwner(result[0].toString())
+      setBlockNumber(result[1].toNumber())
     }).then(unsub => {
       unsubscribe = unsub;
     })
@@ -30,50 +31,54 @@ function Main (props) {
   }, [digest, api.query.poeModule]);
 
   const handleFileChosen = (file) => {
-    const fileReader = new FileReader();
+    let fileReader = new FileReader();
+
     const bufferToDigest = () => {
       const content = Array.from(new Uint8Array(fileReader.result))
         .map((b) => b.toString(16).padStart(2, '0'))
         .join('');
+
       const hash = blake2AsHex(content, 256);
-      setDigest(hash);
-    };
+      setDigest(hash)
+    }
+
     fileReader.onloadend = bufferToDigest;
     fileReader.readAsArrayBuffer(file);
-  };
+  }
 
-  const onDestChange = (_, data) => {
-    setDest(data.value);
-  };
+  // 取得 ApiPromise, 连到去远端 Substrate 节点的代码
+function submitDocInfo(filePath, comment) {
+  // 把 filePath 档档案通过 hash 函数算出它的 hash 值。然后用 Polkadot-JS API 提交个个 extrinsics 到 Substrate
+}
 
   return (
     <Grid.Column width={8}>
-      <h1>Proof of Existence Module</h1>
-      <Form>
-        <Form.Field>
+      <h1>POE Module</h1>
+
+      <Form.Field>
           <Input
             type='file'
             id='file'
             label='Your File'
-            onChange={ (e) => handleFileChosen(e.target.files[0]) }
+            onChange={(e) => handleFileChosen(e.target.files[0])}
           />
         </Form.Field>
+
+      <Form>
         <Form.Field>
           <Input
-            fluid
-            label='To'
+            label='target AccountID'
+            state='accountId'
             type='text'
-            placeholder='address'
-            state='dest'
-            onChange={onDestChange}
+            onChange={(_, { value }) => setAccountId(value)}
           />
         </Form.Field>
-        <Form.Field>
-          <TxButton
+        <Form.Field style={{ textAlign: 'center' }}>
+        <TxButton
             accountPair={accountPair}
-            label='Create Claim'
-            setStatus={setStatus}
+            label='Create'
             type='SIGNED-TX'
+            setStatus={setStatus}
             attrs={{
               palletRpc: 'poeModule',
               callable: 'createClaim',
@@ -83,9 +88,9 @@ function Main (props) {
           />
           <TxButton
             accountPair={accountPair}
-            label='Revoke Claim'
-            setStatus={setStatus}
+            label='Revoke'
             type='SIGNED-TX'
+            setStatus={setStatus}
             attrs={{
               palletRpc: 'poeModule',
               callable: 'revokeClaim',
@@ -95,20 +100,20 @@ function Main (props) {
           />
           <TxButton
             accountPair={accountPair}
-            label='Transfer Claim'
-            setStatus={setStatus}
+            label='Transfer'
             type='SIGNED-TX'
+            setStatus={setStatus}
             attrs={{
               palletRpc: 'poeModule',
               callable: 'transferClaim',
-              inputParams: [digest, dest],
-              paramFields: [true, true]
+              inputParams: [digest,accountId],
+              paramFields: [true]
             }}
           />
         </Form.Field>
+        <div style={{ overflowWrap: 'break-word' }}>{status}</div>
+        <div>{`claim info, owner: ${owner}, blockNumber: ${blockNumber}`}</div>
       </Form>
-      <div style={{ marginTop: 10 }}>{status}</div>
-      <div style={{ fontSize: 12, color: 'orange' }}>{`Claim info, owner: ${owner}, blockNumber: ${blockNumber}`}</div>
     </Grid.Column>
   );
 }
@@ -117,4 +122,4 @@ export default function PoeModule (props) {
   const { api } = useSubstrate();
   return (api.query.poeModule && api.query.poeModule.proofs
     ? <Main {...props} /> : null);
-  }
+}
