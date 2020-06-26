@@ -260,7 +260,7 @@ impl template::Trait for Runtime {
 // impl pallet_kitties::Trait for Runtime {
 // }
 
-impl pallet_newkitties::Trait for Runtime {
+impl pallet_kitties::Trait for Runtime {
 	// add code here
 }
 
@@ -284,7 +284,7 @@ construct_runtime!(
 		// Substrate Kitties module
 		// Kitties: pallet_kitties::{Module, Storage, Call},
 
-		NewKitties: pallet_newkitties::{Module},
+		NewKitties: pallet_kitties::{Module,Storage,Call},
 	}
 );
 
