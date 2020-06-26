@@ -167,7 +167,7 @@ package = 'pallet-transaction-payment'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
-[dependencies.pallet-new-kitties]
+[dependencies.pallet-kitties]
 default-features = false
 path = '../pallets/kitties'
 

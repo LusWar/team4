@@ -284,7 +284,7 @@ construct_runtime!(
 		// Substrate Kitties module
 		// Kitties: pallet_kitties::{Module, Storage, Call},
 
-		NewKitties: pallet_kitties::{Module,Storage,Call},
+		Kitties: pallet_kitties::{Module,Storage,Call},
 	}
 );
 
