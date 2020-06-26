@@ -55,6 +55,7 @@ decl_module! {
 
 		type Error = Error<T>;
 
+		/// Create a new kitty
 		#[weight = 0]
 		pub fn create(origin) {
 			let sender = ensure_signed(origin)? ;
@@ -72,11 +73,18 @@ decl_module! {
 		}
 
 
+		/// Breed kitties
 		#[weight = 0]
 		pub fn breed(origin, kitty_id_1: T::KittyIndex, kitty_id_2: T::KittyIndex) {
 			let sender = ensure_signed(origin)? ;
 
 			Self::do_breed(&sender, kitty_id_1, kitty_id_2)?;
+		}
+
+		/// Transfer a kitty to new owner
+		#[weight = 0]
+		pub fn transfer(origin, to: T::AccountId, kitty_id: T::KittyIndex) {
+			// 作业
 		}
 
 
@@ -164,13 +172,6 @@ impl<T: Trait> OwnerKitties<T> {
 
 	}
 
-
-
-
-
-
-
-
 }
 
 
@@ -213,15 +214,8 @@ impl<T: Trait> Module<T> {
 
 	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, kitty: Kitty) {
 
-		//作业
-
 		Kitties::<T>::insert(kitty_id,kitty);
 		KittiesCount::<T>::put(kitty_id+1.into());
-
-
-		// let owner_id = Self::owner_kitties_count(&owner);
-		// <OwnerKitties<T>>::insert((&owner,owner_id),kitty_id);
-		// <OwnerKittiesCount<T>>::insert(&owner,owner_id +1.into());
 
 		Self::insert_owned_kitty(owner, kitty_id);
 
@@ -336,6 +330,7 @@ mod tests {
 				next: None,
 			}));
 
+
 			OwnedKittiesTest::append(&0, 2);
 
 			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
@@ -380,5 +375,29 @@ mod tests {
 	#[test]
 	fn owned_kitties_can_remove_values() {
 		// 作业
+
+		new_test_ext().execute_with(|| {
+			OwnedKittiesTest::append(&0, 1);
+			OwnedKittiesTest::append(&0, 2);
+			OwnedKittiesTest::append(&0, 3);
+			OwnedKittiesTest::append(&0, 4);
+			OwnedKittiesTest::append(&0, 5);
+
+
+			OwnedKittiesTest::remove(&0, 3);
+			
+			assert_eq!(OwnedKittiesTest::get(&(0, Some(3))), None);
+
+			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), Some(KittyLinkedItem {
+				prev: Some(1),
+				next: Some(4),
+			}));
+			
+			assert_eq!(OwnedKittiesTest::get(&(0, Some(4))), Some(KittyLinkedItem {
+				prev: Some(2),
+				next: Some(5),
+			}));
+			
+		});
 	}
 }
