@@ -7,12 +7,11 @@ use sp_io::hashing::blake2_128;
 use frame_system::ensure_signed;
 use sp_runtime::{DispatchResult, DispatchError, traits::{AtLeast32Bit, Bounded, Member} };
 
-#[cfg_attr(feature = "std", derive(Debug, PartialEq, Eq))]
 
 #[derive(Encode,Decode)]
 pub struct Kitty(pub [u8; 16]) ;
 
-
+#[cfg_attr(feature = "std", derive(Debug, PartialEq, Eq))]
 #[derive(Encode,Decode)]
 pub struct KittyLinkedItem<T: Trait> {
 	pub prev: Option<T::KittyIndex>,
@@ -45,6 +44,7 @@ decl_error! {
 	pub enum Error for Module<T: Trait> {
 		KittiesCountOverflow,
 		InvalidKittyId,
+		RequireDifferentParent,
 	}
 
 }
@@ -52,6 +52,8 @@ decl_error! {
 
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin{
+
+		type Error = Error<T>;
 
 		#[weight = 0]
 		pub fn create(origin) {
@@ -64,8 +66,6 @@ decl_module! {
 
 
 			let kitty = Kitty(dna);
-
-			//作业
 
 			Self::insert_kitty(&sender, kitty_id, kitty);
 
@@ -192,8 +192,6 @@ impl<T: Trait> Module<T> {
 
 	fn random_value(sender: &T::AccountId) -> [u8; 16]{
 
-		//作业
-
 		let payload = (
 			<pallet_randomness_collective_flip::Module<T> as Randomness<T::Hash>>::random_seed(),
 			&sender,
@@ -233,6 +231,8 @@ impl<T: Trait> Module<T> {
 	fn do_breed(sender: &T::AccountId, kitty_id_1: T::KittyIndex, kitty_id_2: T::KittyIndex) ->DispatchResult {
 		let kitty1 = Self::kitties(kitty_id_1).ok_or(Error::<T>::InvalidKittyId)?;
 		let kitty2 = Self::kitties(kitty_id_2).ok_or(Error::<T>::InvalidKittyId)?;
+
+		ensure!(kitty_id_1 != kitty_id_2, Error::<T>::RequireDifferentParent);
 
 		let kitty_id = Self::next_kitty_id()?;
 
