@@ -45,6 +45,8 @@ decl_error! {
 		KittiesCountOverflow,
 		InvalidKittyId,
 		RequireDifferentParent,
+		RequireOwner,
+		KittyIndexNotExist,
 	}
 
 }
@@ -85,6 +87,20 @@ decl_module! {
 		#[weight = 0]
 		pub fn transfer(origin, to: T::AccountId, kitty_id: T::KittyIndex) {
 			// 作业
+
+			//确认用户签名
+			let owner = ensure_signed(origin)?;
+
+			//检查存证是否存在
+			ensure!(Kitties::<T>::contains_key(&kitty_id),Error::<T>::KittyIndexNotExist );
+
+			//检查AccountId下是否有相应的KittyId
+			ensure!(OwnerKitties::<T>::contains_key((&owner, Some(kitty_id))),Error::<T>::RequireOwner );
+
+			<OwnerKitties<T>>::remove(&owner,kitty_id);
+
+			<OwnerKitties<T>>::append(&to,kitty_id);
+
 		}
 
 
