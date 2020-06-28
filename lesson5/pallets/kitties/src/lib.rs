@@ -40,6 +40,7 @@ decl_error! {
 decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin{
 
+
 		#[weight = 0]
 		pub fn create(origin) {
 			let sender = ensure_signed(origin)? ;
