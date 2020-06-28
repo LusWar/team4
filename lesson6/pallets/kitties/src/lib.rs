@@ -72,6 +72,15 @@ decl_module! {
 		#[weight = 0]
 		pub fn transfer(origin, to: T::AccountId, kitty_id: T::KittyIndex) {
 			// 作业
+			let sender = ensure_signed(origin)?;
+
+			ensure!(
+				OwnedKitties::<T>::get((&sender, Some(kitty_id))).is_some(),
+				Error::<T>::RequireOwner
+			);
+
+			OwnedKitties::<T>::remove(&sender, kitty_id);
+			OwnedKitties::<T>::append(&to, kitty_id);
 		}
 	}
 }
@@ -164,6 +173,7 @@ impl<T: Trait> Module<T> {
 
 	fn insert_owned_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex) {
 		// 作业
+		OwnedKitties::<T>::append(owner, kitty_id);
 	}
 
 	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, kitty: Kitty) {
@@ -322,5 +332,73 @@ mod tests {
 	#[test]
 	fn owned_kitties_can_remove_values() {
 		// 作业
+
+		new_test_ext().execute_with(|| {
+			OwnedKittiesTest::append(&1, 1);
+			OwnedKittiesTest::remove(&1, 1);
+
+			assert_eq!(
+				OwnedKittiesTest::get(&(1, None)),
+				Some(KittyLinkedItem { prev: None, next: None })
+			);
+
+			OwnedKittiesTest::append(&1, 1);
+			OwnedKittiesTest::append(&1, 2);
+			OwnedKittiesTest::append(&1, 3);
+			OwnedKittiesTest::append(&2, 3);
+
+			OwnedKittiesTest::remove(&1, 2);
+
+			assert_eq!(OwnedKittiesTest::get(&(1, None)), Some(KittyLinkedItem {
+				prev: Some(3),
+				next: Some(1),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(1, Some(1))), Some(KittyLinkedItem{
+				prev: None,
+				next: Some(3),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(1, Some(3))), Some(KittyLinkedItem{
+				prev: Some(1),
+				next: None,
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(2, None)), Some(KittyLinkedItem {
+				prev: Some(3),
+				next: Some(3),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(2, Some(3))), Some(KittyLinkedItem{
+				prev: None,
+				next: None,
+			}));
+
+			OwnedKittiesTest::remove(&1, 1);
+
+			assert_eq!(OwnedKittiesTest::get(&(1, None)), Some(KittyLinkedItem {
+				prev: Some(3),
+				next: Some(3),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(1, Some(3))), Some(KittyLinkedItem{
+				prev: None,
+				next: None,
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(2, None)), Some(KittyLinkedItem {
+				prev: Some(3),
+				next: Some(3),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(2, Some(3))), Some(KittyLinkedItem{
+				prev: None,
+				next: None,
+			}));
+
+			OwnedKittiesTest::remove(&1, 3);
+
+			assert_eq!(OwnedKittiesTest::get(&(1, Some(3))), None);
+		})
 	}
 }
