@@ -1,47 +1,51 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(feature = "std"),no_std)]
 
-use codec::{Encode, Decode};
-use frame_support::{
-	decl_module, decl_storage, decl_error, decl_event, ensure, StorageValue, StorageMap, Parameter,
-	traits::{Randomness, Currency, ExistenceRequirement},
-};
+
+use codec::{Encode,Decode};
+use frame_support::{ decl_module, decl_storage, decl_error, decl_event, StorageValue, StorageMap, ensure, Parameter, traits::{Randomness, Currency, ExistenceRequirement} };
 use sp_io::hashing::blake2_128;
-use frame_system::{self as system, ensure_signed};
-use sp_runtime::{DispatchError, traits::{AtLeast32Bit, Bounded, Member}};
+use frame_system::{self as system,ensure_signed};
+use sp_runtime::{DispatchError, traits::{AtLeast32Bit, Bounded, Member} };
 use crate::linked_item::{LinkedList, LinkedItem};
 
 mod linked_item;
 
-#[derive(Encode, Decode)]
-pub struct Kitty(pub [u8; 16]);
+
+#[derive(Encode,Decode)]
+pub struct Kitty(pub [u8; 16]) ;
+
 
 pub trait Trait: frame_system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as frame_system::Trait>::Event>;
-	type KittyIndex: Parameter + Member + AtLeast32Bit + Bounded + Default + Copy;
+	type KittyIndex: Parameter + AtLeast32Bit + Bounded + Member + Default + Copy;
 	type Currency: Currency<Self::AccountId>;
 	type Randomness: Randomness<Self::Hash>;
 }
 
 type BalanceOf<T> = <<T as Trait>::Currency as Currency<<T as frame_system::Trait>::AccountId>>::Balance;
 type KittyLinkedItem<T> = LinkedItem<<T as Trait>::KittyIndex>;
-type OwnedKittiesList<T> = LinkedList<OwnedKitties<T>, <T as system::Trait>::AccountId, <T as Trait>::KittyIndex>;
+type OwnerKittiesList<T> = LinkedList<OwnerKitties<T>, <T as system::Trait>::AccountId, <T as Trait>::KittyIndex>;
+
+
+
+
 
 decl_storage! {
 	trait Store for Module<T: Trait> as Kitties {
-		/// Stores all the kitties, key is the kitty id / index
 		pub Kitties get(fn kitties): map hasher(blake2_128_concat) T::KittyIndex => Option<Kitty>;
-		/// Stores the total number of kitties. i.e. the next kitty index
+
 		pub KittiesCount get(fn kitties_count): T::KittyIndex;
 
-		/// Store owned kitties in a linked list.
-		pub OwnedKitties get(fn owned_kitties): map hasher(blake2_128_concat) (T::AccountId, Option<T::KittyIndex>) => Option<KittyLinkedItem<T>>;
-		/// Store owner of each kitity.
+		pub OwnerKitties get(fn owner_kitties): map hasher(blake2_128_concat) (T::AccountId,  Option<T::KittyIndex>) => Option<KittyLinkedItem<T>>;
+
 		pub KittyOwners get(fn kitty_owner): map hasher(blake2_128_concat) T::KittyIndex => Option<T::AccountId>;
 
-		/// Get kitty price. None means not for sale.
 		pub KittyPrices get(fn kitty_price): map hasher(blake2_128_concat) T::KittyIndex => Option<BalanceOf<T>>;
+
+
 	}
 }
+
 
 decl_error! {
 	pub enum Error for Module<T: Trait> {
@@ -49,10 +53,13 @@ decl_error! {
 		InvalidKittyId,
 		RequireDifferentParent,
 		RequireOwner,
+		KittyIndexNotExist,
 		NotForSale,
 		PriceTooLow,
 	}
+
 }
+
 
 decl_event!(
 	pub enum Event<T> where
@@ -71,8 +78,10 @@ decl_event!(
 	}
 );
 
+
 decl_module! {
-	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
+	pub struct Module<T: Trait> for enum Call where origin: T::Origin{
+
 		type Error = Error<T>;
 
 		fn deposit_event() = default;
@@ -80,164 +89,220 @@ decl_module! {
 		/// Create a new kitty
 		#[weight = 0]
 		pub fn create(origin) {
-			let sender = ensure_signed(origin)?;
+			let sender = ensure_signed(origin)? ;
+
+
 			let kitty_id = Self::next_kitty_id()?;
 
-			// Generate a random 128bit value
 			let dna = Self::random_value(&sender);
 
-			// Create and store kitty
+
 			let kitty = Kitty(dna);
+
 			Self::insert_kitty(&sender, kitty_id, kitty);
 
 			Self::deposit_event(RawEvent::Created(sender, kitty_id));
+
 		}
+
 
 		/// Breed kitties
 		#[weight = 0]
 		pub fn breed(origin, kitty_id_1: T::KittyIndex, kitty_id_2: T::KittyIndex) {
-			let sender = ensure_signed(origin)?;
+			let sender = ensure_signed(origin)? ;
 
 			let new_kitty_id = Self::do_breed(&sender, kitty_id_1, kitty_id_2)?;
 
 			Self::deposit_event(RawEvent::Created(sender, new_kitty_id));
+
 		}
 
 		/// Transfer a kitty to new owner
 		#[weight = 0]
 		pub fn transfer(origin, to: T::AccountId, kitty_id: T::KittyIndex) {
-			let sender = ensure_signed(origin)?;
+			// 作业
 
-			ensure!(<OwnedKitties<T>>::contains_key((&sender, Some(kitty_id))), Error::<T>::RequireOwner);
+			//确认用户签名
+			let owner = ensure_signed(origin)?;
 
-			Self::do_transfer(&sender, &to, kitty_id);
+			//检查存证是否存在
+			ensure!(Kitties::<T>::contains_key(&kitty_id),Error::<T>::KittyIndexNotExist );
 
-			Self::deposit_event(RawEvent::Transferred(sender, to, kitty_id));
+			//检查AccountId下是否有相应的KittyId
+			ensure!(OwnerKitties::<T>::contains_key((&owner, Some(kitty_id))),Error::<T>::RequireOwner );
+
+			Self::do_transfer(&owner, &to, kitty_id);
+
+			Self::deposit_event(RawEvent::Transferred(owner, to, kitty_id));
+
 		}
 
-		/// Set a price for a kitty for sale
-		/// None to delist the kitty
+
 		#[weight = 0]
- 		pub fn ask(origin, kitty_id: T::KittyIndex, new_price: Option<BalanceOf<T>>) {
-			let sender = ensure_signed(origin)?;
+		pub fn ask(origin, kitty_id: T::KittyIndex, price: Option<BalanceOf<T>>) {
 
-			ensure!(<OwnedKitties<T>>::contains_key((&sender, Some(kitty_id))), Error::<T>::RequireOwner);
+			let owner = ensure_signed(origin)?;
 
-			<KittyPrices<T>>::mutate_exists(kitty_id, |price| *price = new_price);
+			//检查存证是否存在
+			ensure!(Kitties::<T>::contains_key(&kitty_id),Error::<T>::KittyIndexNotExist );
 
-			Self::deposit_event(RawEvent::Ask(sender, kitty_id, new_price));
+			//检查AccountId下是否有相应的KittyId
+			ensure!(OwnerKitties::<T>::contains_key((&owner, Some(kitty_id))),Error::<T>::RequireOwner );
+
+			KittyPrices::<T>::mutate_exists(kitty_id, |old_price|  *old_price = price);
+
+			Self::deposit_event(RawEvent::Ask(owner, kitty_id, price));
+
 		}
 
-		/// Buy a kitty
+
 		#[weight = 0]
 		pub fn buy(origin, kitty_id: T::KittyIndex, price: BalanceOf<T>) {
+
 			let sender = ensure_signed(origin)?;
 
 			let owner = Self::kitty_owner(kitty_id).ok_or(Error::<T>::InvalidKittyId)?;
 
 			let kitty_price = Self::kitty_price(kitty_id).ok_or(Error::<T>::NotForSale)?;
 
-			ensure!(price >= kitty_price, Error::<T>::PriceTooLow);
 
-			T::Currency::transfer(&sender, &owner, kitty_price, ExistenceRequirement::KeepAlive)?;
+			ensure!(kitty_price <= price,Error::<T>::PriceTooLow);
 
-			<KittyPrices<T>>::remove(kitty_id);
+			//转账
+			T::Currency::transfer(&sender, &owner, price, ExistenceRequirement::KeepAlive)?;
+
+			KittyPrices::<T>::mutate_exists(kitty_id, |old_price|  *old_price = Some(price));
 
 			Self::do_transfer(&owner, &sender, kitty_id);
 
 			Self::deposit_event(RawEvent::Sold(owner, sender, kitty_id, kitty_price));
+
 		}
+
+
 	}
 }
+
+
+
 
 fn combine_dna(dna1: u8, dna2: u8, selector: u8) -> u8 {
 	(selector & dna1) | (!selector & dna2)
 }
 
+
 impl<T: Trait> Module<T> {
-	fn random_value(sender: &T::AccountId) -> [u8; 16] {
+
+
+
+	fn next_kitty_id() -> sp_std::result::Result<T::KittyIndex,DispatchError> {
+
+		let kitty_id = Self::kitties_count();
+
+		ensure!(kitty_id <= T::KittyIndex::max_value(),Error::<T>::KittiesCountOverflow);
+
+		Ok(kitty_id)
+
+	}
+
+
+	fn random_value(sender: &T::AccountId) -> [u8; 16]{
+
 		let payload = (
 			T::Randomness::random_seed(),
 			&sender,
-			<frame_system::Module<T>>::extrinsic_index(),
-		);
+			<frame_system::Module<T>>::extrinsic_index()
+			);
+
 		payload.using_encoded(blake2_128)
 	}
 
-	fn next_kitty_id() -> sp_std::result::Result<T::KittyIndex, DispatchError> {
-		let kitty_id = Self::kitties_count();
-		if kitty_id == T::KittyIndex::max_value() {
-			return Err(Error::<T>::KittiesCountOverflow.into());
-		}
-		Ok(kitty_id)
+
+	fn insert_owned_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex){
+
+		//作业
+
+		<OwnerKittiesList<T>>::append(owner,kitty_id);
+
+		KittyOwners::<T>::insert(kitty_id, &owner);
+
 	}
 
-	fn insert_owned_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex) {
-		<OwnedKittiesList<T>>::append(owner, kitty_id);
-		<KittyOwners<T>>::insert(kitty_id, owner);
-	}
 
 	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, kitty: Kitty) {
-		// Create and store kitty
-		Kitties::<T>::insert(kitty_id, kitty);
-		KittiesCount::<T>::put(kitty_id + 1.into());
+
+		Kitties::<T>::insert(kitty_id,kitty);
+		KittiesCount::<T>::put(kitty_id+1.into());
 
 		Self::insert_owned_kitty(owner, kitty_id);
+
 	}
 
+	fn do_transfer(owner: &T::AccountId, to: &T::AccountId, kitty_id: T::KittyIndex) {
+		OwnerKittiesList::<T>::remove(owner,kitty_id);
+		Self::insert_owned_kitty(to,kitty_id);
+	}
+
+	
 	fn do_breed(sender: &T::AccountId, kitty_id_1: T::KittyIndex, kitty_id_2: T::KittyIndex) -> sp_std::result::Result<T::KittyIndex, DispatchError> {
 		let kitty1 = Self::kitties(kitty_id_1).ok_or(Error::<T>::InvalidKittyId)?;
 		let kitty2 = Self::kitties(kitty_id_2).ok_or(Error::<T>::InvalidKittyId)?;
 
-		ensure!(<OwnedKitties<T>>::contains_key((&sender, Some(kitty_id_1))), Error::<T>::RequireOwner);
-		ensure!(<OwnedKitties<T>>::contains_key((&sender, Some(kitty_id_2))), Error::<T>::RequireOwner);
 		ensure!(kitty_id_1 != kitty_id_2, Error::<T>::RequireDifferentParent);
 
 		let kitty_id = Self::next_kitty_id()?;
 
+		let selector = Self::random_value(&sender);
+
 		let kitty1_dna = kitty1.0;
 		let kitty2_dna = kitty2.0;
 
-		// Generate a random 128bit value
-		let selector = Self::random_value(&sender);
 		let mut new_dna = [0u8; 16];
 
-		// Combine parents and selector to create new kitty
 		for i in 0..kitty1_dna.len() {
 			new_dna[i] = combine_dna(kitty1_dna[i], kitty2_dna[i], selector[i]);
 		}
 
-		Self::insert_kitty(sender, kitty_id, Kitty(new_dna));
+		let kitty = Kitty(new_dna);
+
+		Self::insert_kitty(sender, kitty_id, kitty);
 
 		Ok(kitty_id)
+
 	}
 
-	fn do_transfer(from: &T::AccountId, to: &T::AccountId, kitty_id: T::KittyIndex)  {
-		<OwnedKittiesList<T>>::remove(&from, kitty_id);
-		Self::insert_owned_kitty(&to, kitty_id);
-	}
+
 }
+
 
 /// tests for this module
 #[cfg(test)]
 mod tests {
+
 	use super::*;
 
+
+	use crate::{Module, Trait};
+	use sp_io::TestExternalities;
 	use sp_core::H256;
 	use frame_support::{impl_outer_origin, parameter_types, weights::Weight};
+
+
 	use sp_runtime::{
 		traits::{BlakeTwo256, IdentityLookup}, testing::Header, Perbill,
 	};
 	use frame_system as system;
 
+	
+
 	impl_outer_origin! {
 		pub enum Origin for Test {}
 	}
 
-	// For testing the module, we construct most of a mock runtime. This means
+	// For testing the pallet, we construct most of a mock runtime. This means
 	// first constructing a configuration type (`Test`) which `impl`s each of the
-	// configuration traits of modules we want to use.
-	#[derive(Clone, Eq, PartialEq, Debug)]
+	// configuration traits of pallets we want to use.
+	#[derive(Clone, Eq, PartialEq)]
 	pub struct Test;
 	parameter_types! {
 		pub const BlockHashCount: u64 = 250;
@@ -266,71 +331,115 @@ mod tests {
 		type AvailableBlockRatio = AvailableBlockRatio;
 		type Version = ();
 		type ModuleToIndex = ();
-		type AccountData = ();
+		type AccountData = pallet_balances::AccountData<u64>;
 		type OnNewAccount = ();
 		type OnKilledAccount = ();
 	}
-	impl Trait for Test {
-		type KittyIndex = u32;
+
+	parameter_types! {
+		pub const ExistentialDeposit: u64 = 1;
 	}
-	type OwnedKittiesTest = OwnedKitties<Test>;
+
+
+	impl pallet_balances::Trait for Test {
+		type Balance = u64;
+		type DustRemoval = ();
+		type Event = ();
+		type ExistentialDeposit = ExistentialDeposit;
+		type AccountStore = System;
+	}
+
+
+	impl Trait for Test {
+		type Event = ();
+		type Currency = Balances;
+	 	type KittyIndex = u32;
+  		type Randomness = Randomness;
+ 	}
+
+ 	pub type KittyModule = Module<Test>;
+
+	pub type System = system::Module<Test>;
+	pub type Balances = pallet_balances::Module<Test>;
+	pub type Randomness = pallet_randomness_collective_flip::Module<Test>;
+
+
+	type OwnerKittiesTest = OwnerKitties<Test>;
+
+	type KittyLinkedItemTest = LinkedItem<u32>;
+
+	type OwnerKittiesListTest = LinkedList<OwnerKittiesTest, u64, u32>;
+
 
 	// This function basically just builds a genesis storage key/value store according to
 	// our desired mockup.
 	fn new_test_ext() -> sp_io::TestExternalities {
-		system::GenesisConfig::default().build_storage::<Test>().unwrap().into()
+
+		let mut storage = system::GenesisConfig::default()
+				.build_storage::<Test>()
+				.unwrap();
+
+			pallet_balances::GenesisConfig::<Test> {
+				balances: vec![(1, 10000), (2, 10000), (3, 10000), (4, 10000)],
+			}
+			.assimilate_storage(&mut storage).unwrap();
+
+			let mut ext = TestExternalities::from(storage);
+			ext.execute_with(|| System::set_block_number(1));
+			ext.into()
 	}
 
-	#[test]
+		#[test]
 	fn owned_kitties_can_append_values() {
 		new_test_ext().execute_with(|| {
-			OwnedKittiesTest::append(&0, 1);
+			OwnerKittiesListTest::append(&1, 1);
 
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
 				prev: Some(1),
 				next: Some(1),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(1))), Some(KittyLinkedItemTest {
 				prev: None,
 				next: None,
 			}));
 
-			OwnedKittiesTest::append(&0, 2);
 
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+			OwnerKittiesListTest::append(&1, 2);
+
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
 				prev: Some(2),
 				next: Some(1),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(1))), Some(KittyLinkedItemTest {
 				prev: None,
 				next: Some(2),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(2))), Some(KittyLinkedItemTest {
 				prev: Some(1),
 				next: None,
 			}));
 
-			OwnedKittiesTest::append(&0, 3);
+			OwnerKittiesListTest::append(&1, 3);
 
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
 				prev: Some(3),
 				next: Some(1),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(1))), Some(KittyLinkedItemTest {
 				prev: None,
 				next: Some(2),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(2))), Some(KittyLinkedItemTest {
 				prev: Some(1),
 				next: Some(3),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(3))), Some(KittyLinkedItem {
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(3))), Some(KittyLinkedItemTest {
 				prev: Some(2),
 				next: None,
 			}));
@@ -339,58 +448,219 @@ mod tests {
 
 	#[test]
 	fn owned_kitties_can_remove_values() {
+		// 作业
+
 		new_test_ext().execute_with(|| {
-			OwnedKittiesTest::append(&0, 1);
-			OwnedKittiesTest::append(&0, 2);
-			OwnedKittiesTest::append(&0, 3);
+			OwnerKittiesListTest::append(&1, 1);
+			OwnerKittiesListTest::append(&1, 2);
+			OwnerKittiesListTest::append(&1, 3);
+			OwnerKittiesListTest::append(&1, 4);
+			OwnerKittiesListTest::append(&1, 5);
 
-			OwnedKittiesTest::remove(&0, 2);
 
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
-				prev: Some(3),
+			OwnerKittiesListTest::remove(&1, 3);
+			
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(3))), None);
+
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(2))), Some(KittyLinkedItemTest {
+				prev: Some(1),
+				next: Some(4),
+			}));
+			
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(4))), Some(KittyLinkedItemTest {
+				prev: Some(2),
+				next: Some(5),
+			}));
+			
+		});
+	}
+
+
+	#[test]
+	fn create_kitty_works(){
+		new_test_ext().execute_with(||{
+
+			// 生成Kitty
+			let mut _result = KittyModule::create(Origin::signed(1));
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),1);
+
+			// 账户1的OwnerKitties Head
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
+				prev: Some(0),
+				next: Some(0),
+			}));
+
+			// 判断0＃ Kitty拥有者
+			assert_eq!(KittyOwners::<Test>::get(0),Some(1));
+
+			// 生成Kitty
+			_result = KittyModule::create(Origin::signed(2));
+
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),2);
+
+
+			// 账户2的OwnerKitties Head
+			assert_eq!(OwnerKittiesTest::get(&(2, None)), Some(KittyLinkedItemTest {
+				prev: Some(1),
 				next: Some(1),
 			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), Some(KittyLinkedItem {
-				prev: None,
-				next: Some(3),
-			}));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), None);
+			// 判断1＃ Kitty拥有者
+			assert_eq!(KittyOwners::<Test>::get(1),Some(2));
 
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(3))), Some(KittyLinkedItem {
-				prev: Some(1),
-				next: None,
-			}));
-
-			OwnedKittiesTest::remove(&0, 1);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
-				prev: Some(3),
-				next: Some(3),
-			}));
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), None);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), None);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(3))), Some(KittyLinkedItem {
-				prev: None,
-				next: None,
-			}));
-
-			OwnedKittiesTest::remove(&0, 3);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
-				prev: None,
-				next: None,
-			}));
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(1))), None);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), None);
-
-			assert_eq!(OwnedKittiesTest::get(&(0, Some(2))), None);
 		});
 	}
+
+
+	#[test]
+	fn breed_kitty_works(){
+		new_test_ext().execute_with(||{
+
+			// 生成3只Kitty
+			let mut _result = KittyModule::create(Origin::signed(1));
+			_result = KittyModule::create(Origin::signed(1));
+			_result = KittyModule::create(Origin::signed(1));
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),3);
+
+
+			// 合成Kitty
+			_result = KittyModule::breed(Origin::signed(1), 0, 1);
+
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),4);
+
+
+			// 账户1的OwnerKitties链表
+			assert_eq!(OwnerKittiesTest::get(&(1, Some(3))), Some(KittyLinkedItemTest {
+				prev: Some(2),
+				next: None,
+			}));
+
+			// 判断合成Kitty拥有者
+			assert_eq!(KittyOwners::<Test>::get(3),Some(1));
+
+		});
+	}
+
+	#[test]
+	fn transfer_kitty_works(){
+		new_test_ext().execute_with(||{
+
+			// 生成1只Kitty
+			let mut _result = KittyModule::create(Origin::signed(1));
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),1);
+
+			// 账户1的OwnerKitties链表
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
+				prev: Some(0),
+				next: Some(0),
+			}));
+
+			// 账户2的OwnerKitties链表
+			assert_eq!(OwnerKittiesTest::get(&(2, None)), None);
+
+
+			// 判断0# Kitty拥有者
+			assert_eq!(KittyOwners::<Test>::get(0),Some(1));
+
+
+			// 账户1转让0＃ Kitty 给账户2
+			_result = KittyModule::transfer(Origin::signed(1), 2, 0);
+
+
+			// 账户1的OwnerKitties链表
+			assert_eq!(OwnerKittiesTest::get(&(1, None)), Some(KittyLinkedItemTest {
+				prev: None,
+				next: None,
+			}));
+
+			// 账户2的OwnerKitties链表
+			assert_eq!(OwnerKittiesTest::get(&(2, None)), Some(KittyLinkedItemTest {
+				prev: Some(0),
+				next: Some(0),
+			}));
+
+
+			// 判断0# Kitty拥有者
+			assert_eq!(KittyOwners::<Test>::get(0),Some(2));
+
+		});
+	}
+
+
+
+	#[test]
+	fn ask_kitty_price_works(){
+		new_test_ext().execute_with(||{
+
+			// 生成1只Kitty
+			let mut _result = KittyModule::create(Origin::signed(1));
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),1);
+
+			// 0＃ Kitty 价格
+			assert_eq!(KittyPrices::<Test>::get(0),None);
+
+			// 账户1修改0＃ Kitty 价格
+			_result = KittyModule::ask(Origin::signed(1), 0, Some(100));
+
+			// 修改后的0＃ Kitty 价格
+			assert_eq!(KittyPrices::<Test>::get(0),Some(100));
+
+		});
+	}
+
+
+
+	#[test]
+	fn buy_kitty_works(){
+		new_test_ext().execute_with(||{
+
+			// 生成1只Kitty
+			let mut _result = KittyModule::create(Origin::signed(1));
+
+			// Kitty总数量
+			assert_eq!(KittiesCount::<Test>::get(),1);
+
+			// 0＃ Kitty 价格
+			assert_eq!(KittyPrices::<Test>::get(0),None);
+
+			// 账户1修改0＃ Kitty 价格
+			_result = KittyModule::ask(Origin::signed(1), 0, Some(1000));
+
+			// 修改后的0＃ Kitty 价格
+			assert_eq!(KittyPrices::<Test>::get(0),Some(1000));
+
+			// 0＃ Kitty 拥有者
+			assert_eq!(KittyOwners::<Test>::get(0),Some(1));
+
+			// 账户2花费1000购买账户1的0＃ Kitty
+			_result = KittyModule::buy(Origin::signed(2), 0, 1000);
+
+			// 0＃ Kitty 拥有者
+			assert_eq!(KittyOwners::<Test>::get(0),Some(2));
+
+			// 账户1当前余额
+			assert_eq!(Balances::total_balance(&1), 11000);
+
+			// 账户2当前余额
+			assert_eq!(Balances::total_balance(&2), 9000);
+
+		});
+	}
+
+
+
+
 }
