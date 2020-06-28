@@ -2644,7 +2644,7 @@ dependencies = [
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",
- "pallet-kitties",
+ "pallet-new-kitties",
  "pallet-randomness-collective-flip",
  "pallet-sudo",
  "pallet-template",
@@ -2876,7 +2876,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "pallet-kitties"
+name = "pallet-new-kitties"
 version = "0.1.0"
 dependencies = [
  "frame-support",
