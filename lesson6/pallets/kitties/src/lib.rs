@@ -71,7 +71,13 @@ decl_module! {
 		/// Transfer a kitty to new owner
 		#[weight = 0]
 		pub fn transfer(origin, to: T::AccountId, kitty_id: T::KittyIndex) {
+			let sender = ensure_signed(origin)?;
+
 			// 作业
+			Self::owned_kitties((&sender, Some(kitty_id))).ok_or(Error::<T>::InvalidKittyId)?;
+
+			OwnedKitties::<T>::remove(&sender, kitty_id);
+			OwnedKitties::<T>::append(&to, kitty_id);
 		}
 	}
 }
@@ -164,6 +170,7 @@ impl<T: Trait> Module<T> {
 
 	fn insert_owned_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex) {
 		// 作业
+		OwnedKitties::<T>::append(owner, kitty_id);
 	}
 
 	fn insert_kitty(owner: &T::AccountId, kitty_id: T::KittyIndex, kitty: Kitty) {
@@ -211,6 +218,7 @@ mod tests {
 		traits::{BlakeTwo256, IdentityLookup}, testing::Header, Perbill,
 	};
 	use frame_system as system;
+	use frame_support::{assert_noop};
 
 	impl_outer_origin! {
 		pub enum Origin for Test {}
@@ -256,6 +264,7 @@ mod tests {
 		type KittyIndex = u32;
 	}
 	type OwnedKittiesTest = OwnedKitties<Test>;
+	type KittiesTest = Module<Test>;
 
 	// This function basically just builds a genesis storage key/value store according to
 	// our desired mockup.
@@ -322,5 +331,59 @@ mod tests {
 	#[test]
 	fn owned_kitties_can_remove_values() {
 		// 作业
+		new_test_ext().execute_with(|| {
+			OwnedKittiesTest::append(&0, 1);
+
+			OwnedKittiesTest::remove(&0, 1);
+
+			// Remove the one kitty
+			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+				prev: None,
+				next: None,
+			}));
+
+			OwnedKittiesTest::append(&0, 2);
+			OwnedKittiesTest::append(&0, 3);
+			OwnedKittiesTest::append(&0, 4);
+
+			// Remove the non-exist kitty
+			OwnedKittiesTest::remove(&0, 1);
+			// Remove the fist kitty
+			OwnedKittiesTest::remove(&0, 2);
+
+			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+				prev: Some(4),
+				next: Some(3),
+			}));
+
+			assert_eq!(OwnedKittiesTest::get(&(0, Some(3))), Some(KittyLinkedItem {
+				prev: None,
+				next: Some(4),
+			}));
+
+			// Remove the second last kitty
+			OwnedKittiesTest::remove(&0, 3);
+			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+				prev: Some(4),
+				next: Some(4),
+			}));
+
+			// Remove the last kitty
+			OwnedKittiesTest::remove(&0, 4);
+			assert_eq!(OwnedKittiesTest::get(&(0, None)), Some(KittyLinkedItem {
+				prev: None,
+				next: None,
+			}));
+		});
+	}
+
+	#[test]
+	fn owned_kitties_failed_when_transfer() {
+		new_test_ext().execute_with(|| {
+			assert_noop!{
+				KittiesTest::transfer(Origin::signed(1), 2, 1),
+				Error::<Test>::InvalidKittyId
+			};
+		})
 	}
 }
