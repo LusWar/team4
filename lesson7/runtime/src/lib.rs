@@ -258,6 +258,10 @@ impl template::Trait for Runtime {
 }
 
 impl pallet_kitties::Trait for Runtime {
+	type Event = Event;
+	type KittyIndex = u32;
+	type Currency = Balances;
+	type Randomness = RandomnessCollectiveFlip;
 }
 
 construct_runtime!(
