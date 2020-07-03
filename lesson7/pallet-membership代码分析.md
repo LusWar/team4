@@ -1,9 +1,10 @@
 A-分析add_member的计算复杂度
 
-add_member主要流程分两步：
-1. 在已排序members vector上做binary search找到插入新member的合适位置插入新member，这部分的时间复杂度为O(logN)
-2. change_members_sorted，这部分由于可以有不同的实现，因为时间复杂度未知
-总体而言，add_member的时间复杂度至少为O(logN)
+add_member主要流程分几个步骤：
+1. 在已排序members vector上做binary search找到插入新member的合适位置，这部分的时间复杂度为O(logN)
+2. 在找到的位置插入新member，这部分时间复杂度最差情况为O(N)
+3. change_members_sorted，这部分由于可以有不同的实现，因为时间复杂度未知
+总体而言，add_member的时间复杂度至少为O(N)
 
 B-分析pallet-membership是否适合以下场景下使用，提供原因：
 * 存储预言机提供者
