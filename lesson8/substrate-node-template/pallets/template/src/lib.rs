@@ -14,11 +14,13 @@ use core::convert::TryInto;
 use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error, dispatch};
 use frame_system::{
 	self as system, ensure_signed,
-	offchain::{Signer, AppCrypto}
+	offchain::{Signer, AppCrypto, CreateSignedTransaction, SendSignedTransaction}
 };
 
 use sp_std::prelude::*;
 use sp_core::crypto::KeyTypeId;
+
+use sp_runtime::{offchain::storage::StorageValueRef};
 
 /// Defines application identifier for crypto keys of this module.
 ///
@@ -66,7 +68,7 @@ mod mock;
 mod tests;
 
 /// The pallet's configuration trait.
-pub trait Trait: system::Trait {
+pub trait Trait: system::Trait + CreateSignedTransaction<Call<Self>> {
 	// Add other types and constants required to configure this pallet.
 
 	/// The overarching event type.
@@ -120,13 +122,17 @@ decl_module! {
 		fn deposit_event() = default;
 
 		#[weight = 10_000]
-		pub fn save_number(origin, index: u64, number: u64) -> dispatch::DispatchResult {
+		pub fn save_number(origin, number: u64) -> dispatch::DispatchResult {
 			// Check it was signed and get the signer. See also: ensure_root and ensure_none
 			let who = ensure_signed(origin)?;
 
 			/*******
 			 * 学员们在这里追加逻辑
 			 *******/
+			let block_number = <system::Module<T>>::block_number();
+			let index: u64 = block_number.try_into().ok().unwrap() as u64 - 1;
+			debug::info!("Numbers of {} is {}", index, number);
+
 			Numbers::insert(index, number);
 
 			Self::deposit_event(RawEvent::NumberAppended(who, index, number));
@@ -140,22 +146,27 @@ decl_module! {
 			/*******
 			 * 学员们在这里追加逻辑
 			 *******/
-			 Self::submit_number(block_number);
+			let numbers = StorageValueRef::persistent(b"offchain-numbers::numbers");
+			let index = block_number.try_into().ok().unwrap() as u64;
+			let num_val: u64 = index.saturating_pow(2);
+
+			let latest = if let Some(Some(val)) = numbers.get::<u64>() {
+				val.saturating_add(num_val)
+			} else {
+				num_val
+			};
+
+			numbers.set(&latest);
+
+			Self::submit_number(latest);
 		}
 
 	}
 }
 
 impl <T: Trait>  Module<T> {
-	fn submit_number(block_number: T::BlockNumber) {
-		let index = block_number.try_into().ok().unwrap() as u64;
-		let latest = if index > 0 {
-			Self::numbers((index - 1) as u64)
-		} else {
-			0
-		};
+	fn submit_number(number: u64) {
 
-		let new_value = latest.saturating_add((index + 1).saturating_pow(2));
 
 		let signer = Signer::<T, T::AuthorityId>::all_accounts();
 
@@ -166,16 +177,16 @@ impl <T: Trait>  Module<T> {
 		}
 
 		let res = signer.send_signed_transaction(|_acc| {
-			Call::save_number(index, new_value);
+			Call::save_number(number)
 		});
 
 		for (_acc, r) in &res {
 			match r {
 				Ok(()) => {
-					debug::native::info!("off-chain transaction number: {}  successfully. ", new_value);
+					debug::native::info!("off-chain transaction number: {}  successfully. ", number);
 				}
 				Err(_) => {
-					debug::error!("off-chain transaction number: {} failed. ", new_value);
+					debug::error!("off-chain transaction number: {} failed. ", number);
 				}
 			}
 		}
