@@ -10,7 +10,26 @@
 /// https://github.com/paritytech/substrate/blob/master/frame/example/src/lib.rs
 
 use frame_support::{debug, decl_module, decl_storage, decl_event, decl_error, dispatch};
-use frame_system::{self as system, ensure_signed};
+use frame_system::{
+	self as system, ensure_signed,
+	offchain::{
+		AppCrypto, CreateSignedTransaction, SendSignedTransaction, Signer, SubmitTransaction,
+	},
+};
+
+use sp_runtime::{
+	offchain as rt_offchain,
+	offchain::storage::StorageValueRef,
+	transaction_validity::{
+		InvalidTransaction, TransactionPriority, TransactionSource, TransactionValidity,
+		ValidTransaction,
+	},
+};
+
+use sp_std::prelude::*;
+use sp_std::str;
+
+use alt_serde::{Deserialize, Deserializer};
 
 #[cfg(test)]
 mod mock;
@@ -18,6 +37,34 @@ mod mock;
 #[cfg(test)]
 mod tests;
 
+// Ethereum api
+pub const COINCAP_API_URL: &[u8] = b"https://api.coincap.io/v2/assets/ethereum";
+pub const CRYPTOCOMPARE_API_URL: &[u8] = b"https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD";
+
+#[serde(crate = "alt_serde")]
+#[derive(Debug, Deserialize)]
+pub struct CoinCap {
+	data: CoinCapData
+}
+
+#[serde(crate = "alt_serde")]
+#[derive(Debug, Deserialize)]
+pub struct CoinCapData {
+	#[serde(deserialize_with = "de_string_to_f64")]
+	priceUsd: f64
+}
+
+#[serde(crate = "alt_serde")]
+#[derive(Debug, Deserialize)]
+pub struct CryptoCompare {
+	USD: f64
+}
+
+fn de_string_to_f64<'der, D>(der: D) -> Result<f64, D::Error>
+	where D: Deserializer<'der> {
+	let s: &str = Deserialize::deserialize(der)?;
+	Ok(s.parse::<f64>().unwrap())
+}
 /// The pallet's configuration trait.
 pub trait Trait: system::Trait {
 	// Add other types and constants required to configure this pallet.
@@ -92,5 +139,13 @@ decl_module! {
 			 *******/
 		}
 
+	}
+}
+
+impl <T: Trait> Module<T> {
+	fn fetch_price_from_remote() -> Result<Vec<u8>, Error<T>> {
+
+		let res: Vec<u8> = vec![];
+		Ok(res)
 	}
 }
