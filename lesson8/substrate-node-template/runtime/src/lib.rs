@@ -1,5 +1,3 @@
-//! The Substrate Node Template runtime. This can be compiled with `#[no_std]`, ready for Wasm.
-
 #![cfg_attr(not(feature = "std"), no_std)]
 // `construct_runtime!` does a lot of recursion and requires us to increase the limit to 256.
 #![recursion_limit="256"]
@@ -9,10 +7,13 @@
 include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 
 use sp_std::prelude::*;
-use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
+use sp_core::{crypto::KeyTypeId, OpaqueMetadata, Encode};
 use sp_runtime::{
 	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
 	transaction_validity::{TransactionValidity, TransactionSource},
+	traits::{
+		SaturatedConversion
+	}
 };
 use sp_runtime::traits::{
 	BlakeTwo256, Block as BlockT, IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
@@ -32,6 +33,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
+	debug,
 	construct_runtime, parameter_types, StorageValue,
 	traits::{KeyOwnerProofSystem, Randomness},
 	weights::{
@@ -239,6 +241,8 @@ parameter_types! {
 	pub const TransactionByteFee: Balance = 1;
 }
 
+pub type SignedPayload = generic::SignedPayload<Call, SignedExtra>;
+
 impl transaction_payment::Trait for Runtime {
 	type Currency = balances::Module<Runtime>;
 	type OnTransactionPayment = ();
@@ -254,7 +258,65 @@ impl sudo::Trait for Runtime {
 
 /// Used for the module template in `./template.rs`
 impl template::Trait for Runtime {
+	type AuthorityId = template::crypto::AuthId;
 	type Event = Event;
+	type Call = Call;
+}
+
+impl<LocalCall> system::offchain::CreateSignedTransaction<LocalCall> for Runtime
+where
+	Call: From<LocalCall>,
+{
+	fn create_transaction<C: system::offchain::AppCrypto<Self::Public, Self::Signature>>(
+		call: Call,
+		public: <Signature as sp_runtime::traits::Verify>::Signer,
+		account: AccountId,
+		index: Index,
+	) -> Option<(
+		Call,
+		<UncheckedExtrinsic as sp_runtime::traits::Extrinsic>::SignaturePayload,
+	)> {
+		let period = BlockHashCount::get() as u64;
+		let current_block = System::block_number()
+			.saturated_into::<u64>()
+			.saturating_sub(1);
+		let tip = 0;
+
+		let extra: SignedExtra = (
+			system::CheckTxVersion::<Runtime>::new(),
+			system::CheckGenesis::<Runtime>::new(),
+			system::CheckEra::<Runtime>::from(generic::Era::mortal(period, current_block)),
+			system::CheckNonce::<Runtime>::from(index),
+			system::CheckWeight::<Runtime>::new(),
+			transaction_payment::ChargeTransactionPayment::<Runtime>::from(tip),
+		);
+
+		#[cfg_attr(not(feature = "std"), allow(unused_variables))]
+		let raw_payload = SignedPayload::new(call, extra)
+			.map_err(|e| {
+				debug::native::warn!("SignedPayload error: {:?}", e);
+			})
+			.ok()?;
+
+		let signature = raw_payload.using_encoded(|payload| C::sign(payload, public))?;
+
+		let address = account;
+		let (call, extra, _) = raw_payload.deconstruct();
+		Some((call, (address, signature, extra)))
+	}
+}
+
+impl system::offchain::SigningTypes for Runtime {
+	type Public = <Signature as sp_runtime::traits::Verify>::Signer;
+	type Signature = Signature;
+}
+
+impl<C> system::offchain::SendTransactionTypes<C> for Runtime
+where
+	Call: From<C>,
+{
+	type OverarchingCall = Call;
+	type Extrinsic = UncheckedExtrinsic;
 }
 
 construct_runtime!(
@@ -288,7 +350,6 @@ pub type SignedBlock = generic::SignedBlock<Block>;
 pub type BlockId = generic::BlockId<Block>;
 /// The SignedExtension to the basic transaction logic.
 pub type SignedExtra = (
-	system::CheckSpecVersion<Runtime>,
 	system::CheckTxVersion<Runtime>,
 	system::CheckGenesis<Runtime>,
 	system::CheckEra<Runtime>,
@@ -337,10 +398,7 @@ impl_runtime_apis! {
 			data.create_extrinsics()
 		}
 
-		fn check_inherents(
-			block: Block,
-			data: sp_inherents::InherentData,
-		) -> sp_inherents::CheckInherentsResult {
+		fn check_inherents(block: Block, data: sp_inherents::InherentData,) -> sp_inherents::CheckInherentsResult {
 			data.check_extrinsics(&block)
 		}
 
@@ -350,9 +408,7 @@ impl_runtime_apis! {
 	}
 
 	impl sp_transaction_pool::runtime_api::TaggedTransactionQueue<Block> for Runtime {
-		fn validate_transaction(
-			source: TransactionSource,
-			tx: <Block as BlockT>::Extrinsic,
+		fn validate_transaction(source: TransactionSource, tx: <Block as BlockT>::Extrinsic,
 		) -> TransactionValidity {
 			Executive::validate_transaction(source, tx)
 		}
@@ -379,9 +435,7 @@ impl_runtime_apis! {
 			opaque::SessionKeys::generate(seed)
 		}
 
-		fn decode_session_keys(
-			encoded: Vec<u8>,
-		) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
+		fn decode_session_keys(encoded: Vec<u8>,) -> Option<Vec<(Vec<u8>, KeyTypeId)>> {
 			opaque::SessionKeys::decode_into_raw_public_keys(&encoded)
 		}
 	}
@@ -391,19 +445,13 @@ impl_runtime_apis! {
 			Grandpa::grandpa_authorities()
 		}
 
-		fn submit_report_equivocation_extrinsic(
-			_equivocation_proof: fg_primitives::EquivocationProof<
-				<Block as BlockT>::Hash,
-				NumberFor<Block>,
-			>,
-			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,
-		) -> Option<()> {
+		fn submit_report_equivocation_extrinsic(_equivocation_proof: fg_primitives::EquivocationProof<
+				<Block as BlockT>::Hash, NumberFor<Block>,>,
+			_key_owner_proof: fg_primitives::OpaqueKeyOwnershipProof,) -> Option<()> {
 			None
 		}
 
-		fn generate_key_ownership_proof(
-			_set_id: fg_primitives::SetId,
-			_authority_id: GrandpaId,
+		fn generate_key_ownership_proof(_set_id: fg_primitives::SetId,_authority_id: GrandpaId,
 		) -> Option<fg_primitives::OpaqueKeyOwnershipProof> {
 			// NOTE: this is the only implementation possible since we've
 			// defined our key owner proof type as a bottom type (i.e. a type
