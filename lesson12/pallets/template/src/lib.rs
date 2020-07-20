@@ -1,15 +1,13 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 
-/// A FRAME pallet template with necessary imports
+/// A FRAME pallet for demo benchmark
 
-/// Feel free to remove or edit this file as needed.
-/// If you change the name of this file, make sure to update its references in runtime/src/lib.rs
-/// If you remove this file, you can remove those references
-
-/// For more guidance on Substrate FRAME, see the example pallet
-/// https://github.com/paritytech/substrate/blob/master/frame/example/src/lib.rs
-
-use frame_support::{decl_module, decl_storage, decl_event, decl_error, dispatch};
+use frame_support::{
+	decl_module, decl_storage, decl_event, decl_error, dispatch,
+	traits::{
+		Get
+	},
+};
 use frame_system::{self as system, ensure_signed};
 
 #[cfg(test)]
@@ -73,9 +71,11 @@ decl_module! {
 		fn deposit_event() = default;
 
 		/// Just a dummy entry point.
-		/// function that can be called by the external world as an extrinsics call
-		/// takes a parameter of the type `AccountId`, stores it, and emits an event
-		#[weight = 10_000]
+		/// # <weight>
+		/// - Base Weight: 14.83 µs
+		/// - DB Weight: 1 Write
+		/// # </weight>
+		#[weight = T::DbWeight::get().writes(1) + 15*1_000_000]
 		pub fn do_something(origin, something: u32) -> dispatch::DispatchResult {
 			// Check it was signed and get the signer. See also: ensure_root and ensure_none
 			let who = ensure_signed(origin)?;
@@ -89,21 +89,42 @@ decl_module! {
 			Ok(())
 		}
 
-		/// Another dummy entry point.
-		/// takes no parameters, attempts to increment storage value, and possibly throws an error
-		#[weight = 10_000]
-		pub fn cause_error(origin) -> dispatch::DispatchResult {
-			// Check it was signed and get the signer. See also: ensure_root and ensure_none
-			let _who = ensure_signed(origin)?;
+	}
+}
 
-			match Something::get() {
-				None => Err(Error::<T>::NoneValue)?,
-				Some(old) => {
-					let new = old.checked_add(1).ok_or(Error::<T>::StorageOverflow)?;
-					Something::put(new);
-					Ok(())
-				},
-			}
+#[cfg(feature = "runtime-benchmarks")]
+mod benchmarking {
+	use super::*;
+	use frame_benchmarking::{benchmarks, account};
+	use frame_system::RawOrigin;
+	use sp_std::prelude::*;
+
+	benchmarks!{
+		_ {
+			let b in 1 .. 1000 => ();
+		}
+
+		do_something {
+			let b in ...;
+			let caller = account("caller", 0, 0);
+		}: _ (RawOrigin::Signed(caller), b.into())
+		verify {
+			let value = Something::get();
+			assert_eq!(value, b.into());
+		}
+	}
+
+	#[cfg(test)]
+	mod tests {
+		use super::*;
+		use crate::mock::{new_test_ext, Test};
+		use frame_support::assert_ok;
+
+		#[test]
+		fn test_benchmarks() {
+			new_test_ext().execute_with(|| {
+				assert_ok!(test_benchmark_do_something::<Test>());
+			});
 		}
 	}
 }

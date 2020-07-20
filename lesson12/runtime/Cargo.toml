@@ -56,6 +56,20 @@ package = 'pallet-randomness-collective-flip'
 tag = 'v2.0.0-rc2'
 version = '2.0.0-rc2'
 
+[dependencies.frame-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc2'
+version = "2.0.0-rc2"
+optional = true
+
+[dependencies.frame-system-benchmarking]
+default-features = false
+git = 'https://github.com/paritytech/substrate.git'
+tag = 'v2.0.0-rc2'
+version = "2.0.0-rc2"
+optional = true
+
 [dependencies.serde]
 features = ['derive']
 optional = true
@@ -153,12 +167,6 @@ package = 'pallet-template'
 path = '../pallets/template'
 version = '2.0.0-rc2'
 
-[dependencies.poe]
-default-features = false
-package = 'pallet-poe'
-path = '../pallets/poe'
-version = '2.0.0-rc2'
-
 [dependencies.timestamp]
 default-features = false
 git = 'https://github.com/paritytech/substrate.git'
@@ -181,6 +189,7 @@ std = [
     'codec/std',
     'frame-executive/std',
     'frame-support/std',
+    "frame-benchmarking/std",
     'grandpa/std',
     'randomness-collective-flip/std',
     'serde',
@@ -201,7 +210,15 @@ std = [
     'timestamp/std',
     'transaction-payment/std',
     'template/std',
-    'poe/std',
+]
+runtime-benchmarks = [
+	"frame-benchmarking",
+	"frame-support/runtime-benchmarks",
+	"system/runtime-benchmarks",
+	"sp-runtime/runtime-benchmarks",
+	"balances/runtime-benchmarks",
+	"template/runtime-benchmarks",
+	"frame-system-benchmarking",
 ]
 
 [build-dependencies.wasm-builder-runner]

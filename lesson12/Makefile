@@ -11,6 +11,17 @@ run:
 	-pkill node-template
 	target/debug/node-template --dev -d target/substrate --execution=Native --ws-external -lruntime=debug
 
+benchmarks:
+	cd node;cargo build --release --features runtime-benchmarks
+	target/release/node-template benchmark \
+		--chain=dev \
+		--execution=wasm \
+		--wasm-execution=compiled \
+		--pallet=pallet-template \
+		--extrinsic=do_something \
+		--steps=20 \
+		--repeat=51
+
 purge:
 	target/debug/node-template purge-chain --dev -y -d target/substrate
 
