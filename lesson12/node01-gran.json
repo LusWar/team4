@@ -1,0 +1,10 @@
+{
+  "jsonrpc":"2.0",
+  "id":1,
+  "method":"author_insertKey",
+  "params": [
+    "gran",
+    "slogan soon trick february forum wet size lawn quality profit curve drop",
+    "0x71e5bfe8069bcd612149270425866c99c48fbe9f001a15e66e3b5a88674339c8"
+  ]
+}
