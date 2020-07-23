@@ -1,3 +1,3 @@
 git add .
-git commit -m "Add HomeWork Lesson 7"
-git push origin lesson-7
+git commit -m "Add HomeWork Lesson 8"
+git push origin lesson-8
