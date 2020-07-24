@@ -53,8 +53,8 @@ mod tests;
 
 const MAX_LEN: usize = 64;
 
-pub const CRYPTOCOMPARE_REMOTE_URL: &[u8] = b"https://min-api.cryptocompare.com/data/price?fsym=BTC&tsyms=USD";
-pub const COINCAP_REMOTE_URL: &[u8] = b"https://api.coincap.io/v2/assets/bitcoin";
+pub const CRYPTOCOMPARE_REMOTE_URL: &[u8] = b"https://min-api.cryptocompare.com/data/price?fsym=ETH&tsyms=USD";
+pub const COINCAP_REMOTE_URL: &[u8] = b"https://api.coincap.io/v2/assets/ethereum";
 
 #[serde(crate = "alt_serde")]
 #[derive(Deserialize, Encode, Decode, Default)]
@@ -207,18 +207,19 @@ impl<T: Trait> Module<T> {
 			)?
 		}
 
-		let number: u64 = block_number.try_into().ok().unwrap() as u64;
+		let index: u64 = block_number.try_into().ok().unwrap() as u64;
 
-		// Make an external HTTP request to fetch the current price.
-		// Note this call will block until response is received.
-		let price: u32;
-		if number % 2 == 0 {
-			price = Self::fetch_price_cryptocompare().map_err(|_| "Submit signed: Failed to fetch price")?;
-		} else { 
-			price = Self::fetch_price_coincap().map_err(|_| "Submit signed: Failed to fetch price")?;
-		};
+		let coincap_price = Self::fetch_price_coincap().map_err(|_| "Submit signed: Failed to fetch price")?;
 
-		debug::info!("fetch price: {}", price);
+		debug::info!("fetch coincap price: {}  of blockNumber {}", coincap_price , index);
+
+		let cryptocompare_price = Self::fetch_price_cryptocompare().map_err(|_| "Submit signed: Failed to fetch price")?;
+
+		debug::info!("fetch cryptocompare price: {}  of blockNumber {}", cryptocompare_price , index);
+
+		let price: u32 = (coincap_price + cryptocompare_price) / 2;
+
+		debug::info!("average price: {} of blockNumber {}", price, index);
 
 		// Using `send_signed_transaction` associated type we create and submit a transaction
 		// representing the call, we've just created.
