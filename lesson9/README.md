@@ -11,6 +11,10 @@
   - https://www.cryptocompare.com/
   - 其他你自己找到的提供者也可以
 
+ ![lesson-9](./imgs/9.1.png)
+
 **(3 分)** 
 
 附加题：为你的 ocw 写单元测试
+
+ ![lesson-9](./imgs/9.2.png)
