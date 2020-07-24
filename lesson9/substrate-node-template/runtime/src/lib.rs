@@ -11,11 +11,12 @@ include!(concat!(env!("OUT_DIR"), "/wasm_binary.rs"));
 use sp_std::prelude::*;
 use sp_core::{crypto::KeyTypeId, OpaqueMetadata};
 use sp_runtime::{
-	self as traits, StaticLookup, BlakeTwo256, Block as BlockT,
-	IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
+	ApplyExtrinsicResult, generic, create_runtime_str, impl_opaque_keys, MultiSignature,
+	transaction_validity::{TransactionValidity, TransactionSource},
 };
 use sp_runtime::traits::{
-	BlakeTwo256, Block as BlockT, IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
+	self as traits, StaticLookup, BlakeTwo256, Block as BlockT,
+	IdentityLookup, Verify, IdentifyAccount, NumberFor, Saturating,
 };
 use sp_api::impl_runtime_apis;
 use sp_consensus_aura::sr25519::AuthorityId as AuraId;
@@ -34,7 +35,7 @@ pub use timestamp::Call as TimestampCall;
 pub use balances::Call as BalancesCall;
 pub use sp_runtime::{Permill, Perbill};
 pub use frame_support::{
-	construct_runtime, parameter_types, StorageValue,debug,
+	construct_runtime, parameter_types, StorageValue, debug,
 	traits::{KeyOwnerProofSystem, Randomness},
 	weights::{
 		Weight, IdentityFee,
@@ -446,7 +447,7 @@ impl_runtime_apis! {
 	impl sp_session::SessionKeys<Block> for Runtime {
 		fn generate_session_keys(seed: Option<Vec<u8>>) -> Vec<u8> {
 			opaque::SessionKeys::generate(seed)
-		}
+		} 
 
 		fn decode_session_keys(
 			encoded: Vec<u8>,
