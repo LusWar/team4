@@ -27,3 +27,5 @@ rls*.log
 **/.DS_Store
 **/build/
 yarn.lock
+/target
+lesson12/node-template

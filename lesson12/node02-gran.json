@@ -1,0 +1,12 @@
+{
+  "jsonrpc":"2.0",
+  "id":1,
+  "method":"author_insertKey",
+  "params": [
+    "gran",
+    "tribe empty shaft impact record dream knife cluster reflect universe tomato evil",
+    "0xe9b8fd842a5edee7d14dd730b150d5094fe085a0e20fbe3d1282b1ed536b467b"
+  ]
+}
+
+
