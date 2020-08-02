@@ -99,8 +99,10 @@ mod erc20 {
         #[test]
         fn approve_works() {
             let mut erc20 = Erc20::new(888);
-            erc20.approve(AccountId::from([0x0; 32]), 666);
-            assert_eq!(erc20.approval(AccountId::from([0x0; 32])), 666);
+            let account = AccountId::from([0x0; 32]);
+            assert_eq!(erc20.approve(account, 889), false);
+            assert_eq!(erc20.approve(account, 666), true);
+            assert_eq!(erc20.approval(account), 666);
         }
     }
 }
