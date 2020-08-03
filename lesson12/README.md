@@ -6,6 +6,7 @@
 
 Note: 上传benchmark运行结果的命令行截图和最终的可调用函数代码片段（包含权重设置）。
 
+![x](images/lesson12-benchmark.png)
 
 2. 选择 node-template 或者其它节点程序，生成 Chain Spec 文件（两种格式都需要）；
 
